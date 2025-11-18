@@ -1,0 +1,26 @@
+.hero{
+    text-align: center;
+    padding: 2rem 0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: all 0.3s ease;
+}
+
+.title{
+    font-size: 3rem;
+    font-weight: bold;
+    color: var(--text-color);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse{
+    0%{
+        opacity: 1;
+    }
+    50%{
+        opacity: 0.5;
+    }
+    100%{
+        opacity: 1;
+    }
+}

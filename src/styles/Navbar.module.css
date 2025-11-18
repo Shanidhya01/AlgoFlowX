@@ -1,0 +1,333 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: var(--navbar-bg);
+  color: var(--navbar-text);
+  box-shadow: 0 4px 20px var(--navbar-shadow);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--navbar-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+
+
+.leftSection {
+  display: flex;
+  align-items: center;
+  animation: slideInLeft 0.6s ease-out;
+}
+
+.logo {
+  margin-right: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 8px var(--logo-shadow);
+}
+
+.logo:hover {
+  transform: scale(1.1) rotate(5deg);
+}
+
+.brandName {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
+  transition: all 0.3s ease;
+}
+
+.brandName:hover {
+  transform: translateY(-1px);
+}
+
+.rightSection {
+  display: flex;
+  align-items: center;
+  animation: slideInRight 0.6s ease-out;
+}
+
+.themeSelector {
+  position: relative;
+}
+
+.themeButton {
+  padding: 0.75rem 1.25rem;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: 2px solid var(--button-border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.themeButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: var(--button-hover-gradient);
+  transition: left 0.3s ease;
+  z-index: -1;
+}
+
+.themeButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--button-shadow);
+  border-color: var(--button-hover-border);
+}
+
+.themeButton:hover::before {
+  left: 0;
+}
+
+.themeButton:active {
+  transform: translateY(0);
+}
+
+.themeMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--menu-bg);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px var(--menu-shadow);
+  border: 1px solid var(--menu-border);
+  z-index: 1000;
+  min-width: 200px;
+  backdrop-filter: blur(20px);
+  transform: translateY(-10px);
+  opacity: 0;
+  animation: dropIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.themeOption {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--menu-text);
+  font-weight: 500;
+  border-radius: 12px;
+  margin: 4px;
+  width: calc(100% - 8px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.themeOption::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--theme-indicator);
+  margin-right: 12px;
+}
+
+.themeOption:hover {
+  background: var(--menu-hover);
+  transform: translateX(4px);
+}
+
+.themeOption.active {
+  font-weight: 600;
+  background: var(--menu-active);
+  color: var(--menu-active-text);
+}
+
+.themeOption.active::after {
+  content: '✓';
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-weight: bold;
+}
+
+/* Animations */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes dropIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Theme variables */
+:root {
+  --navbar-bg: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  --navbar-text: #2c3e50;
+  --navbar-shadow: rgba(0, 0, 0, 0.1);
+  --navbar-border: rgba(255, 255, 255, 0.2);
+  --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --logo-shadow: rgba(102, 126, 234, 0.3);
+  --button-bg: linear-gradient(135deg, #ffffff 0%, #f1f3f5 100%);
+  --button-text: #495057;
+  --button-border: rgba(0, 0, 0, 0.1);
+  --button-hover-border: #667eea;
+  --button-hover-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --button-shadow: rgba(102, 126, 234, 0.4);
+  --menu-bg: rgba(255, 255, 255, 0.95);
+  --menu-text: #495057;
+  --menu-border: rgba(0, 0, 0, 0.1);
+  --menu-shadow: rgba(0, 0, 0, 0.15);
+  --menu-hover: rgba(102, 126, 234, 0.1);
+  --menu-active: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --menu-active-text: #ffffff;
+  --theme-indicator: #6c757d;
+}
+
+:global(.dark) {
+  --navbar-bg: linear-gradient(135deg, #1a1a1a 0%, #2d3436 100%);
+  --navbar-text: #f8f9fa;
+  --navbar-shadow: rgba(0, 0, 0, 0.3);
+  --navbar-border: rgba(255, 255, 255, 0.1);
+  --brand-gradient: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+  --logo-shadow: rgba(116, 185, 255, 0.4);
+  --button-bg: linear-gradient(135deg, #2d3436 0%, #636e72 100%);
+  --button-text: #ddd6fe;
+  --button-border: rgba(255, 255, 255, 0.2);
+  --button-hover-border: #74b9ff;
+  --button-hover-gradient: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+  --button-shadow: rgba(116, 185, 255, 0.4);
+  --menu-bg: rgba(26, 26, 26, 0.95);
+  --menu-text: #f8f9fa;
+  --menu-border: rgba(255, 255, 255, 0.1);
+  --menu-shadow: rgba(0, 0, 0, 0.5);
+  --menu-hover: rgba(116, 185, 255, 0.2);
+  --menu-active: linear-gradient(135deg, #74b9ff 0%, #0984e3 100%);
+  --menu-active-text: #ffffff;
+  --theme-indicator: #74b9ff;
+}
+
+:global(.blue) {
+  --navbar-bg: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  --navbar-text: #0d47a1;
+  --navbar-shadow: rgba(13, 71, 161, 0.2);
+  --navbar-border: rgba(13, 71, 161, 0.1);
+  --brand-gradient: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);
+  --logo-shadow: rgba(25, 118, 210, 0.4);
+  --button-bg: linear-gradient(135deg, #ffffff 0%, #e3f2fd 100%);
+  --button-text: #1565c0;
+  --button-border: rgba(13, 71, 161, 0.2);
+  --button-hover-border: #1976d2;
+  --button-hover-gradient: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  --button-shadow: rgba(25, 118, 210, 0.4);
+  --menu-bg: rgba(227, 242, 253, 0.95);
+  --menu-text: #0d47a1;
+  --menu-border: rgba(13, 71, 161, 0.2);
+  --menu-shadow: rgba(13, 71, 161, 0.2);
+  --menu-hover: rgba(25, 118, 210, 0.1);
+  --menu-active: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  --menu-active-text: #ffffff;
+  --theme-indicator: #1976d2;
+}
+
+:global(.green) {
+  --navbar-bg: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  --navbar-text: #1b5e20;
+  --navbar-shadow: rgba(27, 94, 32, 0.2);
+  --navbar-border: rgba(27, 94, 32, 0.1);
+  --brand-gradient: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+  --logo-shadow: rgba(76, 175, 80, 0.4);
+  --button-bg: linear-gradient(135deg, #ffffff 0%, #e8f5e9 100%);
+  --button-text: #2e7d32;
+  --button-border: rgba(27, 94, 32, 0.2);
+  --button-hover-border: #4caf50;
+  --button-hover-gradient: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%);
+  --button-shadow: rgba(76, 175, 80, 0.4);
+  --menu-bg: rgba(232, 245, 233, 0.95);
+  --menu-text: #1b5e20;
+  --menu-border: rgba(27, 94, 32, 0.2);
+  --menu-shadow: rgba(27, 94, 32, 0.2);
+  --menu-hover: rgba(76, 175, 80, 0.1);
+  --menu-active: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%);
+  --menu-active-text: #ffffff;
+  --theme-indicator: #4caf50;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .navbar {
+    padding: 0.75rem 1rem;
+  }
+  
+  .brandName {
+    font-size: 1.25rem;
+  }
+  
+  .themeButton {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  
+  .themeMenu {
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .logo {
+    width: 32px;
+    height: 32px;
+    margin-right: 0.75rem;
+  }
+  
+  .brandName {
+    font-size: 1.1rem;
+  }
+}
+
