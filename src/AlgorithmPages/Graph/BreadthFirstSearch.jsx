@@ -1,343 +1,694 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Code,
-  BookOpen,
-  RefreshCw,
-  Search,
-} from "lucide-react";
+import React, { useState, useEffect, useCallback } from 'react';
+import { FaPlay, FaPause, FaUndo, FaStepForward, FaCode, FaBookOpen, FaProjectDiagram } from 'react-icons/fa';
 
-// UI COMPONENTS
-function Button({ onClick, disabled, children, className = "" }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-2 bg-black text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${className}`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Input({ type = "text", placeholder, onChange, className = "", value }) {
-  return (
-    <input
-      type={type}
-      placeholder={placeholder}
-      value={value}
-      onChange={onChange}
-      className={`px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 ${className}`}
-    />
-  );
-}
-
-function Card({ children, className = "" }) {
-  return <div className={`bg-white shadow-md rounded-lg ${className}`}>{children}</div>;
-}
-
-// PSEUDOCODE
-function PseudoCode() {
-  return (
-    <div className="mt-6 bg-white shadow-md rounded-lg dark:bg-gray-800">
-      <div className="p-6">
-        <h3 className="text-lg font-semibold mb-3 dark:text-white">BFS Pseudocode</h3>
-        <pre className="text-sm bg-gray-100 p-4 rounded-md dark:bg-gray-700 dark:text-white overflow-x-auto">
-{`function BFS(graph, start):
-    create empty queue
-    enqueue(start)
-    mark start as visited
-
-    while queue not empty:
-        node = queue.dequeue()
-        process(node)
-
-        for each neighbor of node:
-            if not visited:
-                enqueue(neighbor)
-                mark visited
-`}
-        </pre>
-      </div>
-    </div>
-  );
-}
-
-// THEORY
-function Theory() {
-  return (
-    <div className="mt-6 bg-white shadow-md rounded-lg dark:bg-gray-800">
-      <div className="p-6">
-        <h3 className="text-lg font-semibold mb-3 dark:text-white">BFS Theory</h3>
-        <p className="dark:text-gray-300">
-          BFS (Breadth First Search) explores the graph level-by-level using a queue (FIFO).
-        </p>
-
-        <h4 className="font-semibold mt-3 dark:text-white">Applications</h4>
-        <ul className="list-disc pl-5 space-y-1 dark:text-gray-300">
-          <li>Shortest path in unweighted graphs</li>
-          <li>Tree level order traversal</li>
-          <li>Connected components</li>
-          <li>Network broadcast simulation</li>
-        </ul>
-
-        <h4 className="font-semibold mt-3 dark:text-white">Time Complexity</h4>
-        <p className="dark:text-gray-300">O(V + E)</p>
-      </div>
-    </div>
-  );
-}
-
-// MAIN COMPONENT
-export default function BFS() {
-  const [adjListInput, setAdjListInput] = useState(
-    "0:1,2\n1:3\n2:4\n3:\n4:"
-  );
-  const [startNode, setStartNode] = useState("0");
-
+function BFS() {
+  const [tab, setTab] = useState('visualizer');
+  const [isRunning, setIsRunning] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState([]);
-  const [descriptions, setDescriptions] = useState([]);
-  const [currentStep, setCurrentStep] = useState(-1);
+  const [animationSpeed, setAnimationSpeed] = useState(1000);
 
-  const [showPseudo, setShowPseudo] = useState(false);
-  const [showTheory, setShowTheory] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  // Graph nodes
+  const [nodes] = useState([
+    { id: 0, label: 'A', x: 100, y: 100 },
+    { id: 1, label: 'B', x: 300, y: 50 },
+    { id: 2, label: 'C', x: 500, y: 100 },
+    { id: 3, label: 'D', x: 200, y: 250 },
+    { id: 4, label: 'E', x: 400, y: 280 },
+    { id: 5, label: 'F', x: 100, y: 350 }
+  ]);
 
-  // Parse adjacency list
-  const parseGraph = () => {
-    try {
-      const lines = adjListInput.split("\n");
-      const graph = {};
+  // Adjacency list representation
+  const [adjacencyList] = useState({
+    0: [1, 3],      // A -> B, D
+    1: [0, 2, 3],   // B -> A, C, D
+    2: [1, 4],      // C -> B, E
+    3: [0, 1, 5],   // D -> A, B, F
+    4: [2, 5],      // E -> C, F
+    5: [3, 4]       // F -> D, E
+  });
 
-      lines.forEach((line) => {
-        const [node, neighbors] = line.split(":");
-        graph[node.trim()] = neighbors
-          ? neighbors.split(",").map((n) => n.trim()).filter((x) => x !== "")
-          : [];
-      });
+  const [visitedNodes, setVisitedNodes] = useState([]);
+  const [currentNode, setCurrentNode] = useState(null);
+  const [traversalOrder, setTraversalOrder] = useState([]);
+  const [queue, setQueue] = useState([]);
+  const [discoveredEdges, setDiscoveredEdges] = useState([]);
+  const [levelMap, setLevelMap] = useState({});
 
-      return graph;
-    } catch {
-      setErrorMessage("Invalid adjacency list format.");
-      return null;
-    }
-  };
-
-  // BFS Implementation
-  const handleBFS = () => {
-    const graph = parseGraph();
-    if (!graph) return;
-
-    if (!graph[startNode]) {
-      setErrorMessage("Start node does not exist.");
-      return;
-    }
-
-    setErrorMessage("");
-
-    const localSteps = [];
-    const localDescriptions = [];
-
-    const record = (visited, queue, current) => {
-      localSteps.push({
-        visited: [...visited],
-        queue: [...queue],
-        current,
-      });
-    };
-
+  const bfsAlgorithm = useCallback(() => {
+    const steps = [];
     const visited = new Set();
-    const queue = [startNode];
+    const traversalOrder = [];
+    const queue = [];
+    const discoveredEdges = [];
+    const levelMap = {};
 
-    record(visited, queue, null);
-    localDescriptions.push(`Enqueued start node ${startNode}`);
+    const startNode = 0;
+
+    steps.push({
+      type: 'initialize',
+      message: 'Initializing BFS from node A. Adding A to queue.',
+      visitedNodes: Array.from(visited),
+      currentNode: null,
+      traversalOrder: [],
+      queue: [startNode],
+      discoveredEdges: [],
+      levelMap: { [startNode]: 0 }
+    });
+
+    visited.add(startNode);
+    queue.push(startNode);
+    traversalOrder.push(startNode);
+    levelMap[startNode] = 0;
 
     while (queue.length > 0) {
       const node = queue.shift();
-      record(visited, queue, node);
-      localDescriptions.push(`Dequeued node ${node}`);
 
-      if (!visited.has(node)) {
-        visited.add(node);
-        record(visited, queue, node);
-        localDescriptions.push(`Visited node ${node}`);
+      steps.push({
+        type: 'dequeue',
+        message: `Dequeued node ${nodes[node].label}. Checking neighbors: ${adjacencyList[node].map(n => nodes[n].label).join(', ')}`,
+        visitedNodes: Array.from(visited),
+        currentNode: node,
+        traversalOrder: [...traversalOrder],
+        queue: [...queue],
+        discoveredEdges: [...discoveredEdges],
+        levelMap: { ...levelMap }
+      });
 
-        for (let nbr of graph[node]) {
-          if (!visited.has(nbr)) {
-            queue.push(nbr);
-            record(visited, queue, node);
-            localDescriptions.push(`Enqueued neighbor ${nbr}`);
-          }
+      for (let neighbor of adjacencyList[node]) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          traversalOrder.push(neighbor);
+          queue.push(neighbor);
+          levelMap[neighbor] = levelMap[node] + 1;
+          discoveredEdges.push({ from: node, to: neighbor });
+
+          steps.push({
+            type: 'discover',
+            message: `Found unvisited neighbor ${nodes[neighbor].label} from ${nodes[node].label}. Adding to queue at level ${levelMap[neighbor]}.`,
+            visitedNodes: Array.from(visited),
+            currentNode: node,
+            neighborNode: neighbor,
+            traversalOrder: [...traversalOrder],
+            queue: [...queue],
+            discoveredEdges: [...discoveredEdges],
+            levelMap: { ...levelMap }
+          });
+        } else {
+          steps.push({
+            type: 'skip',
+            message: `Neighbor ${nodes[neighbor].label} already visited.`,
+            visitedNodes: Array.from(visited),
+            currentNode: node,
+            neighborNode: neighbor,
+            traversalOrder: [...traversalOrder],
+            queue: [...queue],
+            discoveredEdges: [...discoveredEdges],
+            levelMap: { ...levelMap }
+          });
         }
       }
+
+      steps.push({
+        type: 'process',
+        message: `Finished processing node ${nodes[node].label}.`,
+        visitedNodes: Array.from(visited),
+        currentNode: null,
+        traversalOrder: [...traversalOrder],
+        queue: [...queue],
+        discoveredEdges: [...discoveredEdges],
+        levelMap: { ...levelMap }
+      });
     }
 
-    setSteps(localSteps);
-    setDescriptions(localDescriptions);
+    steps.push({
+      type: 'complete',
+      message: `BFS Complete! Traversal order: ${traversalOrder.map(n => nodes[n].label).join(' → ')}`,
+      visitedNodes: Array.from(visited),
+      currentNode: null,
+      traversalOrder: [...traversalOrder],
+      queue: [],
+      discoveredEdges: [...discoveredEdges],
+      levelMap: { ...levelMap }
+    });
+
+    return { steps, result: { traversalOrder, discoveredEdges, levelMap } };
+  }, [nodes, adjacencyList]);
+
+  const runAlgorithm = () => {
+    const algorithmResult = bfsAlgorithm();
+    setSteps(algorithmResult.steps);
     setCurrentStep(0);
   };
 
-  const current = steps[currentStep] || {};
+  const toggleAnimation = () => {
+    setIsRunning(!isRunning);
+  };
 
-  return (
-    <Card className="w-full max-w-3xl mx-auto dark:bg-gray-800 mt-6">
-      <div className="p-6">
+  const resetAnimation = () => {
+    setIsRunning(false);
+    setCurrentStep(0);
+    setVisitedNodes([]);
+    setCurrentNode(null);
+    setTraversalOrder([]);
+    setQueue([]);
+    setDiscoveredEdges([]);
+    setLevelMap({});
+    runAlgorithm();
+  };
 
-        <h2 className="text-2xl font-bold text-center dark:text-white">
-          Breadth First Search (BFS) Visualization
-        </h2>
+  const stepForward = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
 
-        {/* INPUT SECTION */}
-        <div className="mt-6 space-y-3">
-          <label className="dark:text-white text-sm font-semibold">
-            Adjacency List (Format: node:neighbors)
-          </label>
+  useEffect(() => {
+    runAlgorithm();
+  }, [bfsAlgorithm]);
 
-          <textarea
-            value={adjListInput}
-            onChange={(e) => setAdjListInput(e.target.value)}
-            rows={4}
-            className="w-full p-3 border rounded dark:bg-gray-700 dark:text-white"
-          />
+  useEffect(() => {
+    if (isRunning && currentStep < steps.length - 1) {
+      const timer = setTimeout(() => {
+        setCurrentStep(currentStep + 1);
+      }, animationSpeed);
+      return () => clearTimeout(timer);
+    } else if (currentStep >= steps.length - 1) {
+      isRunning && setIsRunning(false);
+    }
+  }, [isRunning, currentStep, steps.length, animationSpeed]);
 
-          <Input
-            placeholder="Start Node"
-            value={startNode}
-            onChange={(e) => setStartNode(e.target.value)}
-            className="dark:bg-gray-700 dark:text-white"
-          />
+  useEffect(() => {
+    if (steps[currentStep]) {
+      const step = steps[currentStep];
+      setVisitedNodes(step.visitedNodes || []);
+      setCurrentNode(step.currentNode !== undefined ? step.currentNode : null);
+      setTraversalOrder(step.traversalOrder || []);
+      setQueue(step.queue || []);
+      setDiscoveredEdges(step.discoveredEdges || []);
+      setLevelMap(step.levelMap || {});
+    }
+  }, [currentStep, steps]);
 
-          {errorMessage && <p className="text-red-500">{errorMessage}</p>}
+  const renderGraph = () => (
+    <div className="space-y-6">
+      <div className="bg-white/90 rounded-lg p-6 shadow-lg">
+        <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+          <FaProjectDiagram className="text-blue-600" />
+          Graph Visualization
+        </h3>
 
-          <Button onClick={handleBFS}>
-            <Search className="mr-2 h-4 w-4" /> Start BFS
-          </Button>
+        <svg width="100%" height="450" className="border-2 border-gray-300 rounded-lg bg-gray-50">
+          {/* Draw edges */}
+          {Object.entries(adjacencyList).map(([from, toList]) => 
+            toList.map((to) => {
+              if (parseInt(from) < to) {
+                const fromNode = nodes[parseInt(from)];
+                const toNode = nodes[to];
+                const isDiscovered = discoveredEdges.some(e => 
+                  (e.from === parseInt(from) && e.to === to) ||
+                  (e.from === to && e.to === parseInt(from))
+                );
 
-          <Button onClick={() => window.location.reload()} className="text-sm">
-            <RefreshCw className="mr-2 h-4 w-4" /> Reset
-          </Button>
+                return (
+                  <g key={`edge-${from}-${to}`}>
+                    <line
+                      x1={fromNode.x}
+                      y1={fromNode.y}
+                      x2={toNode.x}
+                      y2={toNode.y}
+                      stroke={isDiscovered ? '#3B82F6' : '#D1D5DB'}
+                      strokeWidth={isDiscovered ? 3 : 2}
+                      className={isDiscovered ? 'animate-pulse' : ''}
+                    />
+                  </g>
+                );
+              }
+              return null;
+            })
+          )}
 
-          <div className="flex gap-3">
-            <Button onClick={() => setShowPseudo(!showPseudo)}>
-              <Code className="mr-2 h-4 w-4" /> {showPseudo ? "Hide Code" : "Show Code"}
-            </Button>
+          {/* Draw nodes */}
+          {nodes.map((node) => {
+            const isVisited = visitedNodes.includes(node.id);
+            const isCurrent = currentNode === node.id;
+            const level = levelMap[node.id];
+            const visitOrder = traversalOrder.indexOf(node.id) + 1;
 
-            <Button onClick={() => setShowTheory(!showTheory)}>
-              <BookOpen className="mr-2 h-4 w-4" /> {showTheory ? "Hide Theory" : "Show Theory"}
-            </Button>
+            return (
+              <g key={`node-${node.id}`}>
+                <circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={35}
+                  fill={isCurrent ? '#FCD34D' : isVisited ? '#10B981' : '#E5E7EB'}
+                  stroke={isCurrent ? '#F59E0B' : isVisited ? '#059669' : '#9CA3AF'}
+                  strokeWidth="3"
+                  className={isCurrent ? 'animate-pulse' : ''}
+                />
+                <text
+                  x={node.x}
+                  y={node.y - 5}
+                  textAnchor="middle"
+                  dy="0.3em"
+                  className="text-lg font-bold pointer-events-none select-none"
+                  fill={isCurrent || isVisited ? 'white' : 'black'}
+                  fontSize="20"
+                >
+                  {node.label}
+                </text>
+                {isVisited && (
+                  <text
+                    x={node.x}
+                    y={node.y + 12}
+                    textAnchor="middle"
+                    className="text-xs font-semibold pointer-events-none select-none"
+                    fill={isCurrent ? 'white' : 'white'}
+                    fontSize="12"
+                  >
+                    #{visitOrder}
+                  </text>
+                )}
+              </g>
+            );
+          })}
+        </svg>
+
+        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-blue-50 rounded p-3 border-l-4 border-blue-500">
+            <div className="text-sm font-medium text-gray-600">Visited Nodes</div>
+            <div className="text-2xl font-bold text-blue-600">{visitedNodes.length}</div>
+          </div>
+          <div className="bg-green-50 rounded p-3 border-l-4 border-green-500">
+            <div className="text-sm font-medium text-gray-600">Discovered Edges</div>
+            <div className="text-2xl font-bold text-green-600">{discoveredEdges.length}</div>
+          </div>
+          <div className="bg-purple-50 rounded p-3 border-l-4 border-purple-500">
+            <div className="text-sm font-medium text-gray-600">Queue Size</div>
+            <div className="text-2xl font-bold text-purple-600">{queue.length}</div>
+          </div>
+          <div className="bg-orange-50 rounded p-3 border-l-4 border-orange-500">
+            <div className="text-sm font-medium text-gray-600">Max Level</div>
+            <div className="text-2xl font-bold text-orange-600">
+              {Object.keys(levelMap).length > 0 ? Math.max(...Object.values(levelMap)) : 0}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Traversal Order */}
+      <div className="bg-white/90 rounded-lg p-6 shadow-lg">
+        <h4 className="text-lg font-semibold mb-4">Traversal Order (Level by Level)</h4>
+        <div className="space-y-3">
+          {Object.keys(levelMap).length > 0 ? (
+            Array.from({ length: Math.max(...Object.values(levelMap)) + 1 }).map((_, level) => {
+              const nodesAtLevel = Object.entries(levelMap)
+                .filter(([_, l]) => l === level)
+                .map(([nodeId, _]) => parseInt(nodeId));
+              
+              return (
+                <div key={level} className="flex items-center gap-3">
+                  <div className="bg-gray-700 text-white px-3 py-1 rounded-lg font-semibold text-sm min-w-20 text-center">
+                    Level {level}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {nodesAtLevel.map(nodeId => (
+                      <div
+                        key={nodeId}
+                        className="bg-blue-500 text-white px-3 py-1 rounded-lg font-semibold"
+                      >
+                        {nodes[nodeId].label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <span className="text-gray-500 italic">No nodes visited yet</span>
+          )}
+        </div>
+      </div>
+
+      {/* Full Traversal Order */}
+      <div className="bg-white/90 rounded-lg p-6 shadow-lg">
+        <h4 className="text-lg font-semibold mb-4">Full Traversal Sequence</h4>
+        <div className="flex flex-wrap gap-3">
+          {traversalOrder.length > 0 ? (
+            traversalOrder.map((nodeId, idx) => (
+              <div key={idx} className="flex items-center">
+                <div className="bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold text-lg">
+                  {nodes[nodeId].label}
+                </div>
+                {idx < traversalOrder.length - 1 && (
+                  <div className="mx-2 text-2xl text-gray-400">→</div>
+                )}
+              </div>
+            ))
+          ) : (
+            <span className="text-gray-500 italic">No nodes visited yet</span>
+          )}
+        </div>
+      </div>
+
+      {/* Queue State */}
+      <div className="bg-white/90 rounded-lg p-6 shadow-lg">
+        <h4 className="text-lg font-semibold mb-4">Queue State (FIFO)</h4>
+        <div className="bg-gray-50 rounded-lg p-4 border-2 border-gray-200">
+          {queue.length > 0 ? (
+            <div className="space-y-2">
+              <div className="text-xs font-semibold text-gray-500 mb-2">Front → Rear</div>
+              <div className="flex gap-2 flex-wrap">
+                {queue.map((nodeId, idx) => (
+                  <div
+                    key={idx}
+                    className={`p-3 rounded font-semibold text-white ${
+                      idx === 0 ? 'bg-yellow-500 animate-pulse' : 'bg-gray-400'
+                    }`}
+                  >
+                    {nodes[nodeId].label}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <span className="text-gray-500 italic">Queue is empty</span>
+          )}
+        </div>
+      </div>
+
+      {/* Edges Analysis */}
+      <div className="bg-white/90 rounded-lg p-6 shadow-lg">
+        <h4 className="text-lg font-semibold mb-4">Tree Edges (BFS Edges)</h4>
+        {discoveredEdges.length > 0 ? (
+          <div className="grid md:grid-cols-2 gap-4">
+            {discoveredEdges.map((edge, idx) => (
+              <div key={idx} className="bg-blue-50 rounded-lg p-3 border-l-4 border-blue-500">
+                <div className="text-sm">
+                  <span className="font-semibold">{nodes[edge.from].label}</span>
+                  <span className="text-gray-500"> → </span>
+                  <span className="font-semibold">{nodes[edge.to].label}</span>
+                </div>
+                <div className="text-xs text-gray-600 mt-1">
+                  Level: {levelMap[edge.from]} → {levelMap[edge.to]}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span className="text-gray-500 italic">No edges discovered yet</span>
+        )}
+      </div>
+    </div>
+  );
+
+  const TheorySection = () => (
+    <div className="bg-white/95 rounded-lg p-6 shadow-lg space-y-6">
+      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-600">
+        Breadth-First Search (BFS) Theory
+      </h2>
+
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-xl font-semibold mb-2">Overview</h3>
+          <p className="text-gray-700">
+            Breadth-First Search (BFS) is a graph traversal algorithm that explores all nodes at the present depth level before moving to nodes at the next depth level. It uses a queue (FIFO - First In First Out) data structure to maintain the order of nodes to visit. BFS is particularly useful for finding shortest paths in unweighted graphs.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+            <h4 className="font-semibold mb-2 text-blue-700">Key Characteristics</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 text-sm">
+              <li>Graph traversal algorithm</li>
+              <li>Uses queue (FIFO) data structure</li>
+              <li>Explores breadth/level-by-level</li>
+              <li>Always finds shortest path</li>
+              <li>Time: O(V + E)</li>
+              <li>Space: O(V)</li>
+            </ul>
+          </div>
+
+          <div className="bg-cyan-50 rounded-lg p-4 border-l-4 border-cyan-500">
+            <h4 className="font-semibold mb-2 text-cyan-700">Shortest Path Property</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 text-sm">
+              <li>Finds shortest path in unweighted graphs</li>
+              <li>Visits nodes by distance level</li>
+              <li>Level = shortest distance from source</li>
+              <li>Cannot handle weighted graphs</li>
+              <li>Use Dijkstra for weighted graphs</li>
+            </ul>
           </div>
         </div>
 
-        {/* VISUALIZATION */}
-        {currentStep >= 0 && (
-          <>
-            {/* VISITED SECTION */}
-            <h3 className="mt-6 text-lg font-semibold dark:text-white">
-              Visited Nodes
-            </h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+            <h4 className="font-semibold mb-2 text-green-700">Applications</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 text-sm">
+              <li>Shortest path in unweighted graphs</li>
+              <li>Level-order tree traversal</li>
+              <li>Social network analysis</li>
+              <li>Peer-to-peer networks</li>
+              <li>Web crawling</li>
+              <li>Connected components</li>
+            </ul>
+          </div>
 
-            <div className="flex flex-wrap gap-2 mt-2">
-              {current.visited?.map((v) => (
-                <motion.div
-                  key={v}
-                  className="w-10 h-10 bg-green-600 text-white flex items-center justify-center rounded"
-                  animate={{ scale: 1.1 }}
-                >
-                  {v}
-                </motion.div>
-              ))}
+          <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
+            <h4 className="font-semibold mb-2 text-yellow-700">BFS vs DFS</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 text-sm">
+              <li>BFS: Uses queue (FIFO)</li>
+              <li>DFS: Uses stack (LIFO)</li>
+              <li>BFS: Broad exploration</li>
+              <li>DFS: Deep exploration</li>
+              <li>BFS: Better for shortest paths</li>
+              <li>DFS: Better for topological sort</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h4 className="font-semibold mb-2">How BFS Works</h4>
+          <ol className="list-decimal pl-5 space-y-2 text-gray-700 text-sm">
+            <li>Start from a source node and mark it as visited</li>
+            <li>Enqueue the source node into the queue</li>
+            <li>While queue is not empty:
+              <ol className="list-alpha pl-5 mt-1">
+                <li>Dequeue a node from the front</li>
+                <li>Process the node</li>
+                <li>For each unvisited neighbor, enqueue it</li>
+              </ol>
+            </li>
+            <li>Repeat until queue is empty</li>
+            <li>All nodes at level N are processed before level N+1</li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  );
+
+  const PseudocodeSection = () => (
+    <div className="bg-white/95 rounded-lg p-6 shadow-lg">
+      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-cyan-600 mb-6">
+        Pseudocode
+      </h2>
+
+      <div className="space-y-6">
+        <div className="bg-gray-50 rounded-lg p-4 border">
+          <h4 className="font-semibold mb-3 text-lg">BFS - Using Queue</h4>
+          <pre className="bg-gray-900 text-gray-100 rounded-md p-4 overflow-auto text-sm font-mono">
+            <code>{`BFS(Graph G, Start vertex v):
+  visited = empty set
+  queue = empty queue
+  traversal = empty list
+  
+  add v to visited
+  enqueue(queue, v)
+  
+  while queue is not empty:
+    node = dequeue(queue)
+    add node to traversal
+    
+    for each neighbor of node:
+      if neighbor not in visited:
+        add neighbor to visited
+        enqueue(queue, neighbor)
+  
+  return traversal`}</code>
+          </pre>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-4 border">
+          <h4 className="font-semibold mb-3 text-lg">BFS with Distance/Level Tracking</h4>
+          <pre className="bg-gray-900 text-gray-100 rounded-md p-4 overflow-auto text-sm font-mono">
+            <code>{`BFS_DISTANCE(Graph G, Start vertex v):
+  visited = {v}
+  queue = [v]
+  distance = {v: 0}
+  
+  while queue is not empty:
+    node = dequeue(queue)
+    
+    for each neighbor of node:
+      if neighbor not in visited:
+        add neighbor to visited
+        distance[neighbor] = distance[node] + 1
+        enqueue(queue, neighbor)
+  
+  return distance`}</code>
+          </pre>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-4 border">
+          <h4 className="font-semibold mb-3 text-lg">Shortest Path Using BFS</h4>
+          <pre className="bg-gray-900 text-gray-100 rounded-md p-4 overflow-auto text-sm font-mono">
+            <code>{`BFS_SHORTEST_PATH(Graph G, Start s, End t):
+  visited = {s}
+  queue = [s]
+  parent = {s: null}
+  
+  while queue is not empty:
+    node = dequeue(queue)
+    
+    if node == t:
+      return RECONSTRUCT_PATH(parent, t)
+    
+    for each neighbor of node:
+      if neighbor not in visited:
+        add neighbor to visited
+        parent[neighbor] = node
+        enqueue(queue, neighbor)
+  
+  return "No path found"`}</code>
+          </pre>
+        </div>
+
+        <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+          <h4 className="font-semibold mb-2 text-yellow-900">Complexity Analysis</h4>
+          <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-700">
+            <div>
+              <p className="font-semibold">Time Complexity: O(V + E)</p>
+              <p className="text-xs mt-1">- V: vertices, E: edges</p>
+              <p className="text-xs">- Each vertex & edge visited once</p>
             </div>
+            <div>
+              <p className="font-semibold">Space Complexity: O(V)</p>
+              <p className="text-xs mt-1">- Visited set: O(V)</p>
+              <p className="text-xs">- Queue: O(V) in worst case</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
-            {/* HORIZONTAL QUEUE */}
-            <h3 className="mt-6 text-lg font-semibold dark:text-white">
-              Queue (Front → Back)
-            </h3>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-600 mb-3">
+            BFS Algorithm Visualizer
+          </h1>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Explore how Breadth-First Search traverses a graph level by level to find the shortest path in unweighted graphs.
+          </p>
+        </div>
 
-            <div className="flex justify-center mt-4">
-              <div className="flex flex-row items-center bg-gray-200 dark:bg-gray-700 p-4 rounded-lg shadow border border-gray-400 min-h-[70px] min-w-[100px]">
+        {/* Tab Navigation */}
+        <div className="bg-white/80 rounded-lg p-3 shadow-lg mb-6">
+          <div className="flex flex-wrap gap-2 justify-center">
+            {[
+              { id: 'visualizer', label: 'Visualizer', icon: FaProjectDiagram },
+              { id: 'theory', label: 'Theory', icon: FaBookOpen },
+              { id: 'pseudocode', label: 'Pseudocode', icon: FaCode }
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                  tab === t.id
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                }`}
+              >
+                <t.icon /> {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
-                <AnimatePresence>
-                  {current.queue?.length === 0 && (
-                    <div className="text-gray-500 dark:text-gray-300 text-sm">
-                      Empty Queue
-                    </div>
-                  )}
+        {/* Controls */}
+        {tab === 'visualizer' && (
+          <div className="bg-white/80 rounded-lg p-6 shadow-lg mb-6">
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                onClick={toggleAnimation}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+              >
+                {isRunning ? <FaPause /> : <FaPlay />}
+                {isRunning ? 'Pause' : 'Play'}
+              </button>
 
-                  {current.queue?.map((item, index) => {
-                    const isFront = index === 0;
-                    const isBack = index === current.queue.length - 1;
+              <button
+                onClick={stepForward}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:opacity-50"
+                disabled={currentStep >= steps.length - 1}
+              >
+                <FaStepForward /> Step
+              </button>
 
-                    const justEnqueued =
-                      currentStep > 0 &&
-                      !steps[currentStep - 1].queue.includes(item);
+              <button
+                onClick={resetAnimation}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+              >
+                <FaUndo /> Reset
+              </button>
 
-                    const justDequeued =
-                      currentStep > 0 &&
-                      steps[currentStep - 1].queue.includes(item) &&
-                      !current.queue.includes(item);
-
-                    return (
-                      <motion.div
-                        key={item}
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.25 }}
-                        className={`w-16 h-10 mx-2 flex items-center justify-center rounded-md border text-white
-                          ${
-                            isFront
-                              ? "bg-purple-700 border-purple-300"
-                              : isBack
-                              ? "bg-purple-600 border-purple-300"
-                              : "bg-purple-500 border-purple-200"
-                          }
-                          ${
-                            justEnqueued
-                              ? "ring-2 ring-green-400"
-                              : justDequeued
-                              ? "ring-2 ring-red-400"
-                              : ""
-                          }
-                        `}
-                      >
-                        {item}
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm font-medium">Speed:</span>
+                <select
+                  value={animationSpeed}
+                  onChange={(e) => setAnimationSpeed(parseInt(e.target.value))}
+                  className="p-2 border rounded-lg text-sm"
+                >
+                  <option value={2000}>Slow</option>
+                  <option value={1000}>Normal</option>
+                  <option value={500}>Fast</option>
+                </select>
               </div>
             </div>
 
-            {/* DESCRIPTION */}
-            <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-700 rounded">
-              <p className="dark:text-white">{descriptions[currentStep]}</p>
+            <div className="mt-4">
+              <div className="flex justify-between text-sm text-gray-600 mb-2">
+                <span>Step {currentStep + 1} of {steps.length}</span>
+                <span className="font-semibold">{steps[currentStep]?.type || 'Not Started'}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                ></div>
+              </div>
             </div>
-
-            {/* NAVIGATION */}
-            <div className="flex justify-center gap-4 my-4">
-              <Button
-                disabled={currentStep <= 0}
-                onClick={() => setCurrentStep((p) => p - 1)}
-              >
-                <ChevronLeft className="mr-2 h-4 w-4" /> Previous
-              </Button>
-
-              <Button
-                disabled={currentStep >= steps.length - 1}
-                onClick={() => setCurrentStep((p) => p + 1)}
-              >
-                Next <ChevronRight className="ml-2 h-4 w-4" />
-              </Button>
-            </div>
-          </>
+          </div>
         )}
 
-        {showPseudo && <PseudoCode />}
-        {showTheory && <Theory />}
+        {/* Main Content */}
+        {tab === 'visualizer' && renderGraph()}
+        {tab === 'theory' && <div className="mt-6"><TheorySection /></div>}
+        {tab === 'pseudocode' && <div className="mt-6"><PseudocodeSection /></div>}
+
+        {/* Step Information */}
+        {tab === 'visualizer' && steps[currentStep] && (
+          <div className="bg-white/90 rounded-lg p-6 shadow-lg mt-6">
+            <h3 className="text-lg font-semibold mb-2">Current Step:</h3>
+            <p className="text-gray-700">{steps[currentStep].message}</p>
+          </div>
+        )}
       </div>
-    </Card>
+    </div>
   );
 }
+
+export default BFS;
