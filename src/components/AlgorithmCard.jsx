@@ -26,9 +26,11 @@ const AlgorithmCard = ({ title, description, symbol }) => {
       'Breadth-First Search': '/breadth-first-search',
       "Dijkstra's Algorithm": '/dijkstras',
       'Bellman-Ford Algorithm': '/bellman-ford',
-      'Floyd-Warshall Algorithm': '/floyd-warshall',
-      "Kruskal's Algorithm": '/kruskals',
-      "Prim's Algorithm": '/prims',
+      'Floyd-Warshall Algorithm': '/Floyd-warshall',
+      "Kruskal's Algorithm": '/Krushkals',
+      "Prim's Algorithm": '/Prims',
+      'Disjoint Set Union (Union-Find)': '/union-find',
+      'N-Queens Problem': '/n-queen',
 
       // Recursion
       'Recursion': '/recursion',

@@ -24,6 +24,8 @@ import BellmanFord from "./AlgorithmPages/Graph/BellmanFord"
 import FloydWarshall from "./AlgorithmPages/Graph/FloydWarshall"
 import KrushKals from "./AlgorithmPages/Graph/Krushkals"
 import Prims from "./AlgorithmPages/Graph/Prims"
+import UnionFindDSU from "./AlgorithmPages/Graph/UnionFindDSU"
+import NQueen from "./AlgorithmPages/Graph/NQueen"
 
 import Recursion from './AlgorithmPages/Recursion/Recursion'
 
@@ -60,6 +62,8 @@ function App() {
         <Route path="/Floyd-warshall" element={<FloydWarshall/>} />
         <Route path="/Krushkals" element={<KrushKals/>} />
         <Route path="/Prims" element={<Prims/>} />
+        <Route path="/union-find" element={<UnionFindDSU/>} />
+        <Route path="/n-queen" element={<NQueen/>} />
 
         <Route path="/recursion" element={<Recursion/>} />
 

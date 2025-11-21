@@ -67,6 +67,22 @@ const algorithms = [
     difficulty: 'Medium'
   },
   {
+    title: 'Disjoint Set Union (Union-Find)',
+    description: 'A data structure that keeps track of elements partitioned into disjoint sets and efficiently supports union and find operations with optimizations like path compression and union by rank.',
+    symbol: '🧩',
+    category: 'Graph',
+    difficulty: 'Medium'
+  },
+  {
+    title: 'N-Queens Problem',
+    description: 'A classic backtracking challenge where N queens must be placed on an N×N chessboard such that no two queens attack each other. Demonstrates recursion, constraints, and state exploration.',
+    symbol: '♛',
+    category: 'Backtracking',
+    difficulty: 'Hard'
+  },
+
+
+  {
     title: 'Recursion',
     description: 'A problem-solving method where a function calls itself to solve smaller instances of the problem, often used with base cases to terminate recursion.',
     symbol: '🔁',
