@@ -167,6 +167,27 @@ const algorithms = [
     difficulty: 'Hard'
   },
   {
+    title: 'Sudoku Solver',
+    description: 'A backtracking algorithm that fills a 9×9 Sudoku grid by placing digits while respecting row, column, and sub-grid constraints, exploring and correcting choices through recursion.',
+    symbol: '🔢',
+    category: 'Backtracking',
+    difficulty: 'Hard'
+  },
+  {
+    title: 'KMP Pattern Matcher',
+    description: 'An efficient string-matching algorithm that preprocesses the pattern using the LPS array to skip unnecessary comparisons, allowing linear-time substring search.',
+    symbol: '🔍',
+    category: 'String Algorithms',
+    difficulty: 'Medium'
+  },
+  {
+    title: 'Huffman Coding Tree',
+    description: 'A greedy algorithm that builds an optimal prefix-free binary tree based on character frequencies, producing compressed binary codes used in lossless data compression.',
+    symbol: '🌳',
+    category: 'Greedy',
+    difficulty: 'Medium'
+  },
+  {
     title: 'Greedy Algorithm',
     description: 'An algorithmic approach that makes the best choice at each step, assuming it will lead to the optimal solution.',
     symbol: '🤑',

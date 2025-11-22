@@ -34,6 +34,8 @@ import Dynamic from './AlgorithmPages/DP/Dynamic'
 import BackTrack from './AlgorithmPages/DP/BackTrack'
 
 import Greedy from './AlgorithmPages/Greedy/Greedy'
+import SudokuSolver from "./AlgorithmPages/Recursion/SudokuSolver";
+import KMPPatternMatcher from "./AlgorithmPages/Recursion/KMPPatternMatcher";
 
 function App() {
   return (
@@ -66,6 +68,8 @@ function App() {
         <Route path="/n-queen" element={<NQueen/>} />
 
         <Route path="/recursion" element={<Recursion/>} />
+        <Route path="/sudoku-solver" element={<SudokuSolver/>} />
+        <Route path="/kmp-pattern-matcher" element={<KMPPatternMatcher/>} />
 
         <Route path="/knapsack" element={<Knapsack/>} />
         <Route path="/dynamic" element={<Dynamic/>} />

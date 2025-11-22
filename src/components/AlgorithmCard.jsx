@@ -34,6 +34,9 @@ const AlgorithmCard = ({ title, description, symbol }) => {
 
       // Recursion
       'Recursion': '/recursion',
+      'Sudoku Solver': '/sudoku-solver',
+      'KMP Pattern Matcher': '/kmp-pattern-matcher',
+
 
       // Dynamic Programming
       'Knapsack Problem': '/knapsack',
