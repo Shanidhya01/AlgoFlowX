@@ -20,6 +20,7 @@ const AlgorithmCard = ({ title, description, symbol }) => {
       'Insertion Sort': '/insertion-sort',
       'Counting Sort': '/counting-sort',
       'Bucket Sort': '/bucket-sort',
+      'Topological Sort': '/topological-sort',
 
       // Graph
       'Depth-First Search': '/depth-first-search',
@@ -31,6 +32,7 @@ const AlgorithmCard = ({ title, description, symbol }) => {
       "Prim's Algorithm": '/Prims',
       'Disjoint Set Union (Union-Find)': '/union-find',
       'N-Queens Problem': '/n-queen',
+
 
       // Recursion
       'Recursion': '/recursion',
@@ -45,6 +47,7 @@ const AlgorithmCard = ({ title, description, symbol }) => {
 
       // Greedy
       'Greedy Algorithm': '/greedy',
+      'Huffman Coding Tree': '/huffman-coding',
     };
 
     return routes[title] || '#';

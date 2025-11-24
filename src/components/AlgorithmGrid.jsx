@@ -193,7 +193,15 @@ const algorithms = [
     symbol: '🤑',
     category: 'Advanced',
     difficulty: 'Medium'
+  },
+  {
+    title: 'Topological Sort',
+    description: 'An ordering of the vertices of a directed acyclic graph (DAG) such that for every directed edge u → v, vertex u comes before v in the ordering. Commonly implemented using DFS or Kahn’s BFS-based algorithm.',
+    symbol: '📐',
+    category: 'Graph',
+    difficulty: 'Medium'
   }
+
 ];
 
 function AlgorithmGrid({ searchTerm = '' }) {

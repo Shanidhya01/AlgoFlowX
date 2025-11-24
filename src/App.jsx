@@ -16,6 +16,7 @@ import SelectionSort from "./AlgorithmPages/Sorting/SelectionSort";
 import InsertionSort from "./AlgorithmPages/Sorting/InsertionSort";
 import CountingSort from "./AlgorithmPages/Sorting/CountingSort";
 import BucketSort from "./AlgorithmPages/Sorting/BucketSort";
+import TopologicalSort from "./AlgorithmPages/Sorting/TopologicalSort";
 
 import DepthFirstSearch from "./AlgorithmPages/Graph/DepthFirstSearch";
 import BreadthFirstSearch from "./AlgorithmPages/Graph/BreadthFirstSearch";
@@ -26,6 +27,7 @@ import KrushKals from "./AlgorithmPages/Graph/Krushkals"
 import Prims from "./AlgorithmPages/Graph/Prims"
 import UnionFindDSU from "./AlgorithmPages/Graph/UnionFindDSU"
 import NQueen from "./AlgorithmPages/Graph/NQueen"
+import Huffman from "./AlgorithmPages/Greedy/Huffman";
 
 import Recursion from './AlgorithmPages/Recursion/Recursion'
 
@@ -55,6 +57,7 @@ function App() {
         <Route path="/insertion-sort" element={<InsertionSort/>}/>
         <Route path="/counting-sort" element={<CountingSort/>} />
         <Route path="/bucket-sort" element={<BucketSort/>} />
+        <Route path="/topological-sort" element={<TopologicalSort/>} />
 
 
         <Route path="/depth-first-search"  element={<DepthFirstSearch/>}/>
@@ -66,6 +69,7 @@ function App() {
         <Route path="/Prims" element={<Prims/>} />
         <Route path="/union-find" element={<UnionFindDSU/>} />
         <Route path="/n-queen" element={<NQueen/>} />
+        <Route path="/huffman-coding" element={<Huffman/>} />
 
         <Route path="/recursion" element={<Recursion/>} />
         <Route path="/sudoku-solver" element={<SudokuSolver/>} />
