@@ -1,477 +1,640 @@
-import React, { useState, useEffect } from "react"
-import { ChevronRight, RotateCcw, ArrowDown, BookOpen, Code } from "lucide-react"
-
-function Button({ onClick, disabled, children, className = "" }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-2 bg-black text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center dark:bg-gray-600 dark:text-white ${className}`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function Card({ children, className = "", id }) {
-  return (
-    <div id={id} className={`bg-white dark:bg-gray-800 shadow-md rounded-lg ${className}`}>
-      {children}
-    </div>
-  )
-}
+import React, { useState, useEffect, useCallback } from 'react';
+import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Zap } from 'lucide-react';
 
 function MergeSort() {
-  const [array, setArray] = useState([])
-  const [divideSteps, setDivideSteps] = useState([])
-  const [mergeSteps, setMergeSteps] = useState([])
-  const [currentPhase, setCurrentPhase] = useState("initial")
-  const [currentDivideStep, setCurrentDivideStep] = useState(0)
-  const [currentMergeStep, setCurrentMergeStep] = useState(0)
-  const [showExplanation, setShowExplanation] = useState(false)
-  const [showPseudocode, setShowPseudocode] = useState(false)
-  const [customInput, setCustomInput] = useState("")
-  const [inputError, setInputError] = useState("")
+  const [tab, setTab] = useState('visualizer');
+  const [isRunning, setIsRunning] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [steps, setSteps] = useState([]);
+  const [animationSpeed, setAnimationSpeed] = useState(800);
 
-  const generateArray = () => {
-    const newArray = Array.from({ length: 8 }, () => Math.floor(Math.random() * 50) + 1)
-    setArray(newArray)
-    setDivideSteps([])
-    setMergeSteps([])
-    setCurrentPhase("initial")
-    setCurrentDivideStep(0)
-    setCurrentMergeStep(0)
-    setCustomInput("")
-    setInputError("")
-  }
+  const initialArray = [38, 27, 43, 3, 9, 82, 10];
+  const [array, setArray] = useState(initialArray);
+  const [originalArray, setOriginalArray] = useState(initialArray);
+  const [customInput, setCustomInput] = useState(initialArray.join(', '));
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleCustomInputChange = (e) => {
-    setCustomInput(e.target.value)
-    setInputError("")
-  }
+  const mergeSort = useCallback(() => {
+    const operationSteps = [];
+    const arr = [...array];
 
-  const handleCustomArraySubmit = () => {
-    const inputArray = customInput.split(",").map((num) => Number.parseInt(num.trim(), 10))
-    if (inputArray.some(isNaN)) {
-      setInputError("Please enter valid numbers separated by commas.")
-      return
-    }
-    if (inputArray.length < 2 || inputArray.length > 16) {
-      setInputError("Please enter between 2 and 16 numbers.")
-      return
-    }
-    setArray(inputArray)
-    setDivideSteps([])
-    setMergeSteps([])
-    setCurrentPhase("initial")
-    setCurrentDivideStep(0)
-    setCurrentMergeStep(0)
-    setCustomInput("")
-  }
+    operationSteps.push({
+      type: 'initialize',
+      message: `Starting Merge Sort with array: [${arr.join(', ')}]`,
+      array: [...arr],
+      divisions: [],
+      merging: null,
+      sorted: false,
+      stats: { comparisons: 0, merges: 0, step: 'Initialize' }
+    });
 
-  useEffect(() => {
-    generateArray()
-  }, [])
+    let comparisonCount = 0;
+    let mergeCount = 0;
 
-  const prepareMergeSort = () => {
-    const divideSteps = []
-    const mergeSteps = []
-    const tempArray = [...array]
+    const mergeSortRecursive = (arr, start, end, depth = 0) => {
+      if (end - start <= 1) return arr.slice(start, end);
 
-    const generateDivideSteps = (arr, level = 0, position = "root") => {
-      if (arr.length <= 1) return arr
+      const mid = Math.floor((start + end) / 2);
+      
+      // Divide phase
+      operationSteps.push({
+        type: 'divide',
+        message: `Dividing array [${start}:${end}] at index ${mid}`,
+        array: [...array],
+        divisions: [{ start, mid, end, depth }],
+        merging: null,
+        sorted: false,
+        highlightRange: { start, end },
+        stats: { comparisons: comparisonCount, merges: mergeCount, step: 'Dividing' }
+      });
 
-      const mid = Math.floor(arr.length / 2)
-      const left = arr.slice(0, mid)
-      const right = arr.slice(mid)
+      const left = mergeSortRecursive(arr, start, mid, depth + 1);
+      const right = mergeSortRecursive(arr, mid, end, depth + 1);
 
-      divideSteps.push({
-        original: arr,
-        left,
-        right,
-        level,
-        position,
-      })
+      // Merge phase
+      const merged = [];
+      let i = 0, j = 0;
 
-      generateDivideSteps(left, level + 1, "left")
-      generateDivideSteps(right, level + 1, "right")
-
-      return arr
-    }
-
-    const generateMergeSteps = (arr, level = 0) => {
-      if (arr.length <= 1) return arr
-
-      const mid = Math.floor(arr.length / 2)
-      const left = generateMergeSteps(arr.slice(0, mid), level + 1)
-      const right = generateMergeSteps(arr.slice(mid), level + 1)
-
-      const merged = []
-      let i = 0,
-        j = 0
+      operationSteps.push({
+        type: 'merge_start',
+        message: `Merging [${left.join(', ')}] and [${right.join(', ')}]`,
+        array: [...array],
+        divisions: [],
+        merging: { left: [...left], right: [...right], merged: [], leftIdx: 0, rightIdx: 0 },
+        sorted: false,
+        stats: { comparisons: comparisonCount, merges: mergeCount, step: 'Merging' }
+      });
 
       while (i < left.length && j < right.length) {
+        comparisonCount++;
         if (left[i] <= right[j]) {
-          merged.push(left[i])
-          i++
+          merged.push(left[i]);
+          operationSteps.push({
+            type: 'merge_compare',
+            message: `Comparing ${left[i]} ≤ ${right[j]}, taking ${left[i]} from left`,
+            array: [...array],
+            divisions: [],
+            merging: { left: [...left], right: [...right], merged: [...merged], leftIdx: i, rightIdx: j },
+            sorted: false,
+            stats: { comparisons: comparisonCount, merges: mergeCount, step: 'Comparing' }
+          });
+          i++;
         } else {
-          merged.push(right[j])
-          j++
+          merged.push(right[j]);
+          operationSteps.push({
+            type: 'merge_compare',
+            message: `Comparing ${left[i]} > ${right[j]}, taking ${right[j]} from right`,
+            array: [...array],
+            divisions: [],
+            merging: { left: [...left], right: [...right], merged: [...merged], leftIdx: i, rightIdx: j },
+            sorted: false,
+            stats: { comparisons: comparisonCount, merges: mergeCount, step: 'Comparing' }
+          });
+          j++;
         }
       }
 
-      while (i < left.length) merged.push(left[i++])
-      while (j < right.length) merged.push(right[j++])
+      while (i < left.length) {
+        merged.push(left[i]);
+        operationSteps.push({
+          type: 'merge_remaining',
+          message: `Appending remaining element ${left[i]} from left`,
+          array: [...array],
+          divisions: [],
+          merging: { left: [...left], right: [...right], merged: [...merged], leftIdx: i, rightIdx: j },
+          sorted: false,
+          stats: { comparisons: comparisonCount, merges: mergeCount, step: 'Appending' }
+        });
+        i++;
+      }
 
-      mergeSteps.push({
-        left,
-        right,
-        merged,
-        level,
-        comparing: { left: i, right: j },
-      })
+      while (j < right.length) {
+        merged.push(right[j]);
+        operationSteps.push({
+          type: 'merge_remaining',
+          message: `Appending remaining element ${right[j]} from right`,
+          array: [...array],
+          divisions: [],
+          merging: { left: [...left], right: [...right], merged: [...merged], leftIdx: i, rightIdx: j },
+          sorted: false,
+          stats: { comparisons: comparisonCount, merges: mergeCount, step: 'Appending' }
+        });
+        j++;
+      }
 
-      return merged
+      mergeCount++;
+      operationSteps.push({
+        type: 'merge_complete',
+        message: `Merged result: [${merged.join(', ')}]`,
+        array: [...array],
+        divisions: [],
+        merging: { left: [...left], right: [...right], merged: [...merged], leftIdx: i, rightIdx: j },
+        sorted: false,
+        stats: { comparisons: comparisonCount, merges: mergeCount, step: 'Merge Complete' }
+      });
+
+      return merged;
+    };
+
+    const sortedArray = mergeSortRecursive(arr, 0, arr.length);
+
+    operationSteps.push({
+      type: 'complete',
+      message: `✓ Merge Sort Complete! Sorted array: [${sortedArray.join(', ')}]`,
+      array: sortedArray,
+      divisions: [],
+      merging: null,
+      sorted: true,
+      stats: { comparisons: comparisonCount, merges: mergeCount, step: 'Complete' }
+    });
+
+    return operationSteps;
+  }, [array]);
+
+  const handleSort = () => {
+    const operationSteps = mergeSort();
+    setSteps(operationSteps);
+    setCurrentStep(0);
+    setIsRunning(false);
+  };
+
+  const toggleAnimation = () => {
+    setIsRunning(!isRunning);
+  };
+
+  const resetAnimation = () => {
+    setIsRunning(false);
+    setCurrentStep(0);
+    setArray(originalArray);
+    setSteps([]);
+  };
+
+  const stepForward = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
     }
+  };
 
-    generateDivideSteps(tempArray)
-    generateMergeSteps(tempArray)
+  const handleCustomInput = (input) => {
+    setCustomInput(input);
+    try {
+      const newArray = input.split(',').map(num => {
+        const parsed = parseInt(num.trim(), 10);
+        if (isNaN(parsed)) throw new Error('Invalid number');
+        return parsed;
+      });
+      if (newArray.length === 0) throw new Error('Array is empty');
+      if (newArray.length > 15) throw new Error('Maximum 15 elements allowed');
+      if (newArray.length < 2) throw new Error('Minimum 2 elements required');
+      setArray(newArray);
+      setOriginalArray(newArray);
+      setErrorMessage('');
+      setIsRunning(false);
+      setCurrentStep(0);
+      setSteps([]);
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
 
-    setDivideSteps(divideSteps)
-    setMergeSteps(mergeSteps)
-    setCurrentPhase("divide")
-  }
+  const generateRandomArray = () => {
+    const newArray = Array.from({ length: 8 }, () => Math.floor(Math.random() * 50) + 1);
+    setArray(newArray);
+    setOriginalArray(newArray);
+    setCustomInput(newArray.join(', '));
+    setErrorMessage('');
+    setIsRunning(false);
+    setCurrentStep(0);
+    setSteps([]);
+  };
 
-  const renderArrayBox = (arr, bgColor = "bg-white dark:bg-gray-700", showIndices = true) => (
-    <div className="flex flex-col items-center">
-      {showIndices && (
-        <div className="flex flex-wrap justify-center gap-2 mb-1">
-          {arr.map((_, idx) => (
-            <div
-              key={idx}
-              className="w-8 sm:w-10 md:w-12 text-center text-xs sm:text-sm text-gray-600 dark:text-gray-400"
-            >
-              [{idx}]
+  useEffect(() => {
+    if (isRunning && currentStep < steps.length - 1) {
+      const timer = setTimeout(() => {
+        setCurrentStep(currentStep + 1);
+      }, animationSpeed);
+      return () => clearTimeout(timer);
+    } else if (currentStep >= steps.length - 1) {
+      setIsRunning(false);
+    }
+  }, [isRunning, currentStep, steps.length, animationSpeed]);
+
+  const currentStepData = steps[currentStep] || {};
+
+  const renderVisualizer = () => (
+    <div className="space-y-6">
+      <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+        <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+          <Zap className="text-blue-600" size={28} />
+          Merge Sort Visualization
+        </h3>
+
+        <div className="grid lg:grid-cols-3 gap-8 mb-6">
+          {/* Array Visualization */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Current Array State */}
+            <div>
+              <h4 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">
+                {currentStepData.sorted ? 'Sorted Array' : 'Current State'}
+              </h4>
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 flex flex-wrap gap-2">
+                {currentStepData.array?.map((num, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-14 h-14 flex items-center justify-center rounded-lg font-bold text-lg transition-all transform ${
+                      currentStepData.sorted
+                        ? 'bg-green-500 dark:bg-green-700'
+                        : 'bg-blue-500 dark:bg-blue-700'
+                    } text-white shadow-md border-2 border-gray-300 dark:border-gray-600`}
+                  >
+                    {num}
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
-      )}
-      <div className="flex flex-wrap justify-center gap-2">
-        {arr.map((num, idx) => (
-          <div
-            key={idx}
-            className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center ${bgColor} border border-gray-300 dark:border-gray-600 rounded-lg font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base`}
-          >
-            {num}
+
+            {/* Merge Visualization */}
+            {currentStepData.merging && (
+              <div className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 text-gray-800 dark:text-white">Left Array</h4>
+                    <div className="bg-yellow-50 dark:bg-yellow-900/30 rounded-lg p-3 flex flex-wrap gap-2">
+                      {currentStepData.merging.left.map((num, idx) => (
+                        <div
+                          key={idx}
+                          className={`w-12 h-12 flex items-center justify-center rounded-lg font-bold text-sm ${
+                            idx === currentStepData.merging.leftIdx
+                              ? 'bg-yellow-400 dark:bg-yellow-600 scale-110'
+                              : 'bg-yellow-200 dark:bg-yellow-700'
+                          } text-gray-900 dark:text-white shadow-md border border-gray-300 dark:border-gray-600`}
+                        >
+                          {num}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold mb-2 text-gray-800 dark:text-white">Right Array</h4>
+                    <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-3 flex flex-wrap gap-2">
+                      {currentStepData.merging.right.map((num, idx) => (
+                        <div
+                          key={idx}
+                          className={`w-12 h-12 flex items-center justify-center rounded-lg font-bold text-sm ${
+                            idx === currentStepData.merging.rightIdx
+                              ? 'bg-purple-400 dark:bg-purple-600 scale-110'
+                              : 'bg-purple-200 dark:bg-purple-700'
+                          } text-gray-900 dark:text-white shadow-md border border-gray-300 dark:border-gray-600`}
+                        >
+                          {num}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold mb-2 text-gray-800 dark:text-white">Merged Result</h4>
+                  <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 flex flex-wrap gap-2">
+                    {currentStepData.merging.merged.map((num, idx) => (
+                      <div
+                        key={idx}
+                        className="w-12 h-12 flex items-center justify-center bg-green-500 dark:bg-green-700 text-white rounded-lg font-bold text-sm shadow-md border border-gray-300 dark:border-gray-600"
+                      >
+                        {num}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        ))}
+
+          {/* Statistics */}
+          <div className="space-y-4">
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900 dark:to-purple-900 rounded-lg p-4 border-2 border-blue-300 dark:border-blue-700">
+              <h4 className="font-semibold text-gray-800 dark:text-white mb-3">Statistics</h4>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Comparisons</p>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{currentStepData.stats?.comparisons || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Merges</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{currentStepData.stats?.merges || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Current Step</p>
+                  <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{currentStepData.stats?.step || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-300 dark:border-gray-600">
+              <h4 className="font-semibold text-gray-800 dark:text-white mb-3">Legend</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-blue-500 dark:bg-blue-700"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Original</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-yellow-400 dark:bg-yellow-600"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Left Processing</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-purple-400 dark:bg-purple-600"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Right Processing</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-green-500 dark:bg-green-700"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Merged/Sorted</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 
-  const renderDivideStep = () => {
-    const step = divideSteps[currentDivideStep]
-    if (!step) return null
+  const TheorySection = () => (
+    <div className="bg-white/95 dark:bg-gray-800 rounded-lg p-6 shadow-lg space-y-6">
+      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+        Merge Sort Theory
+      </h2>
 
-    return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-gray-900 dark:text-white">Original Array:</h3>
-          {renderArrayBox(step.original)}
+        <div>
+          <h3 className="text-xl font-semibold mb-2">What is Merge Sort?</h3>
+          <p className="text-gray-700 dark:text-gray-300">
+            Merge Sort is a divide-and-conquer algorithm that divides the input array into two halves, recursively sorts them, and then merges the sorted halves. It's one of the most efficient sorting algorithms with guaranteed O(n log n) time complexity.
+          </p>
         </div>
-        <ArrowDown className="mx-auto text-blue-500" />
-        <div className="flex justify-center gap-8">
-          <div>
-            <h3 className="font-semibold text-center mb-2 text-gray-900 dark:text-white">Left Half:</h3>
-            {renderArrayBox(step.left, "bg-yellow-200 dark:bg-yellow-700")}
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 border-l-4 border-blue-500">
+            <h4 className="font-semibold mb-2 text-blue-700 dark:text-blue-300">Algorithm Steps</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300 text-sm">
+              <li>Divide array into two halves</li>
+              <li>Recursively sort each half</li>
+              <li>Merge sorted halves</li>
+              <li>Compare elements from both halves</li>
+              <li>Build merged sorted array</li>
+              <li>Return sorted result</li>
+            </ul>
           </div>
-          <div>
-            <h3 className="font-semibold text-center mb-2 text-gray-900 dark:text-white">Right Half:</h3>
-            {renderArrayBox(step.right, "bg-yellow-200 dark:bg-yellow-700")}
+
+          <div className="bg-green-50 dark:bg-green-900 rounded-lg p-4 border-l-4 border-green-500">
+            <h4 className="font-semibold mb-2 text-green-700 dark:text-green-300">Characteristics</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300 text-sm">
+              <li>Time: O(n log n) all cases</li>
+              <li>Space: O(n)</li>
+              <li>Stable sorting algorithm</li>
+              <li>Divide-and-conquer approach</li>
+              <li>Predictable performance</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 dark:bg-purple-900 rounded-lg p-4">
+          <h4 className="font-semibold mb-3">When to Use Merge Sort</h4>
+          <div className="space-y-2 text-gray-700 dark:text-gray-300 text-sm">
+            <p>Merge Sort is ideal when:</p>
+            <p className="ml-4">• Guaranteed O(n log n) performance needed</p>
+            <p className="ml-4">• Stability is required</p>
+            <p className="ml-4">• Sorting linked lists</p>
+            <p className="ml-4">• External sorting (large datasets on disk)</p>
+          </div>
+        </div>
+
+        <div className="bg-orange-50 dark:bg-orange-900 rounded-lg p-4">
+          <h4 className="font-semibold mb-3">Complexity Analysis</h4>
+          <div className="space-y-2 text-gray-700 dark:text-gray-300 text-sm font-mono">
+            <p>Time: <span className="font-bold">O(n log n)</span></p>
+            <p className="text-xs">Always divides in half (log n) and merges in linear time (n)</p>
+            <p>Space: <span className="font-bold">O(n)</span></p>
+            <p className="text-xs">Requires temporary arrays for merging</p>
           </div>
         </div>
       </div>
-    )
-  }
+    </div>
+  );
 
-  const renderMergeStep = () => {
-    const step = mergeSteps[currentMergeStep]
-    if (!step) return null
+  const PseudocodeSection = () => (
+    <div className="bg-white/95 dark:bg-gray-800 rounded-lg p-6 shadow-lg space-y-4">
+      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 mb-6">
+        Merge Sort Implementation
+      </h2>
 
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-center gap-8">
-          <div>
-            <h3 className="font-semibold text-center mb-2 text-gray-900 dark:text-white">Left Array:</h3>
-            {renderArrayBox(step.left, "bg-yellow-200 dark:bg-yellow-700")}
-          </div>
-          <div>
-            <h3 className="font-semibold text-center mb-2 text-gray-900 dark:text-white">Right Array:</h3>
-            {renderArrayBox(step.right, "bg-yellow-200 dark:bg-yellow-700")}
-          </div>
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border">
+        <h4 className="font-semibold mb-3 text-lg">Algorithm</h4>
+        <pre className="bg-gray-900 text-gray-100 rounded-md p-4 overflow-x-auto text-xs md:text-sm font-mono leading-relaxed">
+          <code>{`function mergeSort(arr):
+  if arr.length <= 1:
+    return arr
+  
+  mid = arr.length / 2
+  left = mergeSort(arr[0...mid])
+  right = mergeSort(arr[mid...end])
+  
+  return merge(left, right)
+
+function merge(left, right):
+  result = []
+  i = 0
+  j = 0
+  
+  while i < left.length AND j < right.length:
+    if left[i] <= right[j]:
+      result.push(left[i])
+      i++
+    else:
+      result.push(right[j])
+      j++
+  
+  // Append remaining elements
+  while i < left.length:
+    result.push(left[i])
+    i++
+  
+  while j < right.length:
+    result.push(right[j])
+    j++
+  
+  return result`}</code>
+        </pre>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+          <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-300">Advantages</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <li>Guaranteed O(n log n)</li>
+            <li>Stable sorting</li>
+            <li>Predictable performance</li>
+            <li>Good for linked lists</li>
+            <li>Parallelizable</li>
+          </ul>
         </div>
-        <ArrowDown className="mx-auto text-blue-500" />
-        <div>
-          <h3 className="font-semibold text-center mb-2 text-gray-900 dark:text-white">Merged Result:</h3>
-          <div className="flex justify-center">{renderArrayBox(step.merged, "bg-green-200 dark:bg-green-700")}</div>
+
+        <div className="bg-green-50 dark:bg-green-900 rounded-lg p-4 border border-green-200 dark:border-green-700">
+          <h4 className="font-semibold mb-2 text-green-900 dark:text-green-300">Disadvantages</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <li>Extra space O(n) needed</li>
+            <li>Not in-place sorting</li>
+            <li>Slower for small arrays</li>
+            <li>Overhead from recursion</li>
+            <li>Not cache-friendly</li>
+          </ul>
         </div>
       </div>
-    )
-  }
-
-  const nextStep = () => {
-    if (currentPhase === "divide") {
-      if (currentDivideStep < divideSteps.length - 1) {
-        setCurrentDivideStep((prev) => prev + 1)
-      } else {
-        setCurrentPhase("merge")
-      }
-    } else if (currentPhase === "merge") {
-      if (currentMergeStep < mergeSteps.length - 1) {
-        setCurrentMergeStep((prev) => prev + 1)
-      }
-    }
-  }
-
-  const prevStep = () => {
-    if (currentPhase === "merge") {
-      if (currentMergeStep > 0) {
-        setCurrentMergeStep((prev) => prev - 1)
-      } else {
-        setCurrentPhase("divide")
-        setCurrentMergeStep(0)
-      }
-    } else if (currentPhase === "divide") {
-      if (currentDivideStep > 0) {
-        setCurrentDivideStep((prev) => prev - 1)
-      }
-    }
-  }
-
-  const renderExplanation = () => (
-    <Card id="whyMergeSort" className="p-6 mb-6">
-      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Why Merge Sort?</h3>
-      <div className="space-y-4 text-gray-800 dark:text-gray-200">
-        <div>
-          <h4 className="font-semibold">1. Efficiency</h4>
-          <p>
-            Merge sort has a time complexity of O(n log n) for all cases, making it more efficient than simpler
-            algorithms like bubble sort or insertion sort for large datasets.
-          </p>
-        </div>
-        <div>
-          <h4 className="font-semibold">2. Stability</h4>
-          <p>
-            It's a stable sorting algorithm, meaning it preserves the relative order of equal elements in the sorted
-            output.
-          </p>
-        </div>
-        <div>
-          <h4 className="font-semibold">3. Predictable Performance</h4>
-          <p>Unlike quicksort, merge sort's performance is consistent regardless of the input data's initial order.</p>
-        </div>
-        <div>
-          <h4 className="font-semibold">4. Parallelization</h4>
-          <p>The divide-and-conquer approach makes it suitable for parallel processing implementations.</p>
-        </div>
-        <div>
-          <h4 className="font-semibold">5. Time Complexity</h4>
-          <p>
-            - Best Case: O(n log n)
-            <br />- Average Case: O(n log n)
-            <br />- Worst Case: O(n log n)
-          </p>
-          <p className="mt-2">
-            Merge Sort consistently performs at O(n log n) for all cases because it always divides the array into two
-            halves and takes linear time to merge two halves.
-          </p>
-        </div>
-        <div>
-          <h4 className="font-semibold">6. Space Complexity</h4>
-          <p>O(n)</p>
-          <p className="mt-2">
-            Merge Sort requires additional space proportional to the size of the input array. This is because it needs
-            to create temporary arrays during the merging process.
-          </p>
-        </div>
-      </div>
-    </Card>
-  )
-
-  const renderPseudocode = () => (
-    <Card id="mergeSortPseudocode" className="p-6 mb-6">
-      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Merge Sort Pseudocode</h3>
-      <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto text-gray-900 dark:text-white">
-        {`// Main merge sort function
-mergeSort(array):
-    if length of array ≤ 1
-        return array
-    
-    mid = length of array / 2
-    left = array[0...mid]
-    right = array[mid...end]
-    
-    // Recursively sort both halves
-    left = mergeSort(left)
-    right = mergeSort(right)
-    
-    // Merge the sorted halves
-    return merge(left, right)
-
-// Merge function
-merge(left, right):
-    result = empty array
-    leftIndex = 0
-    rightIndex = 0
-    
-    while leftIndex < length of left AND rightIndex < length of right
-        if left[leftIndex] ≤ right[rightIndex]
-            append left[leftIndex] to result
-            leftIndex = leftIndex + 1
-        else
-            append right[rightIndex] to result
-            rightIndex = rightIndex + 1
-    
-    // Append remaining elements
-    append remaining elements of left to result
-    append remaining elements of right to result
-    
-    return result`}
-      </pre>
-    </Card>
-  )
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 sm:p-6 md:p-8">
-      <div className="max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto">
-        <Card className="p-6 mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-0">
-              Merge Sort Visualization
-            </h1>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => {
-                  setShowExplanation(!showExplanation)
-                  if (!showExplanation) {
-                    setTimeout(() => {
-                      document.getElementById("whyMergeSort")?.scrollIntoView({ behavior: "smooth" })
-                    }, 100)
-                  }
-                }}
-                className="text-sm"
-              >
-                <BookOpen className="w-5 h-5 mr-2" />
-                Why Merge Sort?
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowPseudocode(!showPseudocode)
-                  if (!showPseudocode) {
-                    setTimeout(() => {
-                      document.getElementById("mergeSortPseudocode")?.scrollIntoView({ behavior: "smooth" })
-                    }, 100)
-                  }
-                }}
-                className="text-sm"
-              >
-                <Code className="w-5 h-5 mr-2" />
-                Show Pseudocode
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-3">
+            Merge Sort Visualizer
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            Watch the divide-and-conquer algorithm split arrays recursively and merge them back in sorted order.
+          </p>
+        </div>
 
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Custom Array Input:</h2>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+        {/* Tab Navigation */}
+        <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 shadow-lg mb-6">
+          <div className="flex flex-wrap gap-2 justify-center">
+            {[
+              { id: 'visualizer', label: 'Visualizer', icon: Zap },
+              { id: 'theory', label: 'Theory', icon: BookOpen },
+              { id: 'pseudocode', label: 'Algorithm', icon: Code }
+            ].map(t => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                    tab === t.id
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-400'
+                  }`}
+                >
+                  <Icon size={18} /> {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Controls */}
+        {tab === 'visualizer' && (
+          <div className="bg-white/80 dark:bg-gray-800 rounded-lg p-6 shadow-lg mb-6">
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <button
+                onClick={handleSort}
+                disabled={isRunning}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                <Zap size={18} /> Sort
+              </button>
+
+              <button
+                onClick={toggleAnimation}
+                disabled={steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                {isRunning ? <Pause size={18} /> : <Play size={18} />}
+                {isRunning ? 'Pause' : 'Play'}
+              </button>
+
+              <button
+                onClick={stepForward}
+                disabled={currentStep >= steps.length - 1 || steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                <StepForward size={18} /> Step
+              </button>
+
+              <button
+                onClick={resetAnimation}
+                disabled={steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                <RotateCcw size={18} /> Reset
+              </button>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm font-medium">Speed:</span>
+                <select
+                  value={animationSpeed}
+                  onChange={(e) => setAnimationSpeed(parseInt(e.target.value))}
+                  className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={1500}>Slow</option>
+                  <option value={800}>Normal</option>
+                  <option value={300}>Fast</option>
+                </select>
+              </div>
+            </div>
+
+            {steps.length > 0 && (
+              <div>
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <span>Step {currentStep + 1} of {steps.length}</span>
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">{steps[currentStep]?.type?.toUpperCase().replace(/_/g, ' ')}</span>
+                </div>
+                <div className="w-full bg-gray-300 dark:bg-gray-600 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Input Section */}
+            <div className="mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-600">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Enter Custom Array (comma-separated integers):
+              </label>
               <input
                 type="text"
                 value={customInput}
-                onChange={handleCustomInputChange}
-                placeholder="Enter numbers separated by commas"
-                className="w-full sm:w-auto flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                onChange={(e) => handleCustomInput(e.target.value)}
+                placeholder="e.g., 38, 27, 43, 3, 9, 82, 10"
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
               />
-              <Button onClick={handleCustomArraySubmit}>Set Custom Array</Button>
-            </div>
-            {inputError && <p className="text-red-500 mt-2">{inputError}</p>}
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Current Array:</h2>
-            {renderArrayBox(array)}
-          </div>
-
-          {currentPhase !== "initial" && (
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                {currentPhase === "divide" ? "Division Phase" : "Merge Phase"} - Step{" "}
-                {currentPhase === "divide" ? currentDivideStep + 1 : currentMergeStep + 1}
-              </h2>
-
-              {currentPhase === "divide" ? renderDivideStep() : renderMergeStep()}
-
-              <div className="mt-4 bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  {currentPhase === "divide"
-                    ? "Dividing the array into smaller subarrays until we reach individual elements"
-                    : "Merging sorted subarrays back together in sorted order"}
-                </p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
-            <Button onClick={generateArray}>
-              <RotateCcw className="w-5 h-5 mr-2" />
-              New Array
-            </Button>
-
-            {currentPhase === "initial" && <Button onClick={prepareMergeSort}>Start Merge Sort</Button>}
-
-            {currentPhase !== "initial" && (
-              <>
-                <Button onClick={prevStep} disabled={currentPhase === "divide" && currentDivideStep === 0}>
-                  Previous Step
-                </Button>
-
-                <Button
-                  onClick={nextStep}
-                  disabled={currentPhase === "merge" && currentMergeStep === mergeSteps.length - 1}
-                >
-                  Next Step <ChevronRight className="ml-2 w-5 h-5" />
-                </Button>
-              </>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-4 sm:p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Color Guide</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-center">
-              <div className="w-6 h-6 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded mr-2"></div>
-              <span className="text-gray-900 dark:text-white">Original Array</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-6 h-6 bg-yellow-200 dark:bg-yellow-700 border border-gray-300 dark:border-gray-600 rounded mr-2"></div>
-              <div className="text-gray-900 dark:text-white">
-                <span>Division Phase: Subarrays</span>
-                <br />
-                <span>Merge Phase: Arrays being compared</span>
-              </div>
-            </div>
-            <div className="flex items-center">
-              <div className="w-6 h-6 bg-green-200 dark:bg-green-700 border border-gray-300 dark:border-gray-600 rounded mr-2"></div>
-              <span className="text-gray-900 dark:text-white">Merged Result</span>
+              {errorMessage && (
+                <p className="text-red-600 dark:text-red-400 text-sm font-semibold mb-2">⚠️ {errorMessage}</p>
+              )}
+              <button
+                onClick={generateRandomArray}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Generate Random Array
+              </button>
             </div>
           </div>
-        </Card>
+        )}
 
-        {showExplanation && renderExplanation()}
-        {showPseudocode && renderPseudocode()}
+        {/* Main Content */}
+        {tab === 'visualizer' && renderVisualizer()}
+        {tab === 'theory' && <div className="mt-6"><TheorySection /></div>}
+        {tab === 'pseudocode' && <div className="mt-6"><PseudocodeSection /></div>}
+
+        {/* Step Information */}
+        {tab === 'visualizer' && steps[currentStep] && (
+          <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg mt-6 border-l-4 border-blue-500">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Current Step</h3>
+            <p className="text-gray-700 dark:text-gray-300">{currentStepData.message}</p>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }
 
 export default MergeSort;

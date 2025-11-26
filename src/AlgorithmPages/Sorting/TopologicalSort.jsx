@@ -21,7 +21,10 @@ function TopologicalSort() {
     ]
   };
 
-  const [graph] = useState(initialGraph);
+  const [graph, setGraph] = useState(initialGraph);
+  const [nodesInput, setNodesInput] = useState('A, B, C, D, E, F');
+  const [edgesInput, setEdgesInput] = useState('A->B, A->C, B->D, C->D, D->E, E->F');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const topologicalSort = useCallback(() => {
     const operationSteps = [];
@@ -183,6 +186,93 @@ function TopologicalSort() {
     return operationSteps;
   }, [graph]);
 
+  const handleCustomGraph = () => {
+    try {
+      // Parse nodes
+      const nodes = nodesInput
+        .split(',')
+        .map(n => n.trim())
+        .filter(n => n.length > 0);
+
+      if (nodes.length === 0) {
+        throw new Error('Please enter at least one node');
+      }
+
+      if (nodes.length > 10) {
+        throw new Error('Maximum 10 nodes allowed');
+      }
+
+      // Check for duplicate nodes
+      const uniqueNodes = new Set(nodes);
+      if (uniqueNodes.size !== nodes.length) {
+        throw new Error('Duplicate nodes found');
+      }
+
+      // Parse edges
+      const edges = [];
+      if (edgesInput.trim().length > 0) {
+        const edgePairs = edgesInput.split(',').map(e => e.trim());
+        for (const pair of edgePairs) {
+          const match = pair.match(/^(\w+)\s*->\s*(\w+)$/);
+          if (!match) {
+            throw new Error(`Invalid edge format: "${pair}". Use format: A->B`);
+          }
+          const [, from, to] = match;
+          if (!nodes.includes(from)) {
+            throw new Error(`Node "${from}" not found in nodes list`);
+          }
+          if (!nodes.includes(to)) {
+            throw new Error(`Node "${to}" not found in nodes list`);
+          }
+          edges.push([from, to]);
+        }
+      }
+
+      setGraph({ nodes, edges });
+      setErrorMessage('');
+      setSteps([]);
+      setCurrentStep(0);
+      setIsRunning(false);
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
+
+  const generateRandomGraph = () => {
+    const nodeCount = Math.floor(Math.random() * 3) + 4; // 4-6 nodes
+    const nodes = Array.from({ length: nodeCount }, (_, i) => 
+      String.fromCharCode(65 + i)
+    );
+
+    // Generate random edges ensuring DAG structure
+    const edges = [];
+    for (let i = 0; i < nodes.length - 1; i++) {
+      const edgeCount = Math.floor(Math.random() * 2) + 1;
+      for (let j = 0; j < edgeCount && i + j + 1 < nodes.length; j++) {
+        const targetIndex = i + Math.floor(Math.random() * (nodes.length - i - 1)) + 1;
+        edges.push([nodes[i], nodes[targetIndex]]);
+      }
+    }
+
+    setGraph({ nodes, edges });
+    setNodesInput(nodes.join(', '));
+    setEdgesInput(edges.map(([from, to]) => `${from}->${to}`).join(', '));
+    setErrorMessage('');
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+  };
+
+  const resetToDefault = () => {
+    setGraph(initialGraph);
+    setNodesInput('A, B, C, D, E, F');
+    setEdgesInput('A->B, A->C, B->D, C->D, D->E, E->F');
+    setErrorMessage('');
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+  };
+
   const handleSolve = () => {
     const operationSteps = topologicalSort();
     setSteps(operationSteps);
@@ -218,14 +308,68 @@ function TopologicalSort() {
   const currentStepData = steps[currentStep] || {};
 
   const renderGraph = () => {
-    const nodePositions = {
-      A: { x: 100, y: 100 },
-      B: { x: 300, y: 80 },
-      C: { x: 300, y: 180 },
-      D: { x: 500, y: 130 },
-      E: { x: 700, y: 130 },
-      F: { x: 900, y: 130 }
-    };
+    // Generate better layout based on graph structure
+    const nodeCount = graph.nodes.length;
+    const nodePositions = {};
+    
+    // Calculate levels based on topological dependencies
+    const levels = {};
+    const inDegree = {};
+    const adjList = {};
+    
+    // Initialize
+    graph.nodes.forEach(node => {
+      adjList[node] = [];
+      inDegree[node] = 0;
+      levels[node] = 0;
+    });
+    
+    // Build adjacency list and in-degrees
+    graph.edges.forEach(([from, to]) => {
+      adjList[from].push(to);
+      inDegree[to]++;
+    });
+    
+    // Calculate levels using BFS-like approach
+    const queue = graph.nodes.filter(node => inDegree[node] === 0);
+    const levelGroups = {};
+    
+    while (queue.length > 0) {
+      const node = queue.shift();
+      const level = levels[node];
+      
+      if (!levelGroups[level]) levelGroups[level] = [];
+      levelGroups[level].push(node);
+      
+      adjList[node].forEach(neighbor => {
+        levels[neighbor] = Math.max(levels[neighbor], level + 1);
+        inDegree[neighbor]--;
+        if (inDegree[neighbor] === 0) {
+          queue.push(neighbor);
+        }
+      });
+    }
+    
+    // Position nodes based on levels
+    const maxLevel = Math.max(...Object.values(levels));
+    const levelWidth = 200;
+    const nodeSpacing = 100;
+    
+    Object.entries(levelGroups).forEach(([level, nodes]) => {
+      const levelNum = parseInt(level);
+      const nodesInLevel = nodes.length;
+      const startY = 150 - (nodesInLevel - 1) * nodeSpacing / 2;
+      
+      nodes.forEach((node, idx) => {
+        nodePositions[node] = {
+          x: 120 + levelNum * levelWidth,
+          y: startY + idx * nodeSpacing
+        };
+      });
+    });
+    
+    const svgWidth = Math.max(1000, (maxLevel + 1) * levelWidth + 200);
+    const svgHeight = Math.max(350, Math.max(...Object.values(levelGroups).map(g => g.length)) * nodeSpacing + 100);
 
     const isNodeProcessed = currentStepData.processedNodes?.includes;
     const isNodeInQueue = currentStepData.queue?.includes;
@@ -233,46 +377,83 @@ function TopologicalSort() {
 
     return (
       <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 w-full overflow-x-auto">
-        <svg width="1000" height="280" className="mx-auto">
+        <svg width={svgWidth} height={svgHeight} className="mx-auto">
+          {/* Arrow marker definitions */}
+          <defs>
+            <marker
+              id="arrowhead"
+              markerWidth="12"
+              markerHeight="12"
+              refX="11"
+              refY="6"
+              orient="auto"
+              markerUnits="userSpaceOnUse"
+            >
+              <path d="M 0 0 L 12 6 L 0 12 z" fill="#6b7280" />
+            </marker>
+            <marker
+              id="arrowhead-active"
+              markerWidth="12"
+              markerHeight="12"
+              refX="11"
+              refY="6"
+              orient="auto"
+              markerUnits="userSpaceOnUse"
+            >
+              <path d="M 0 0 L 12 6 L 0 12 z" fill="#3b82f6" />
+            </marker>
+          </defs>
+
           {/* Draw edges */}
           {graph.edges.map((edge, idx) => {
             const [from, to] = edge;
             const fromPos = nodePositions[from];
             const toPos = nodePositions[to];
+            
+            if (!fromPos || !toPos) return null;
+            
             const isVisitedEdge = currentStepData.visitedEdges?.some(
               e => e[0] === from && e[1] === to
             );
 
+            // Calculate edge positions (from edge of circle to edge of circle)
+            const dx = toPos.x - fromPos.x;
+            const dy = toPos.y - fromPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Unit vector
+            const ux = dx / distance;
+            const uy = dy / distance;
+            
+            // Start and end points at circle edges (radius = 30)
+            const x1 = fromPos.x + ux * 32;
+            const y1 = fromPos.y + uy * 32;
+            const x2 = toPos.x - ux * 42;
+            const y2 = toPos.y - uy * 42;
+
+            // Use curved path for better visualization
+            const midX = (x1 + x2) / 2;
+            const midY = (y1 + y2) / 2;
+            
+            // Add slight curve for parallel edges
+            const curvature = 0.15;
+            const perpX = -uy * distance * curvature;
+            const perpY = ux * distance * curvature;
+
             return (
-              <g key={idx}>
-                {/* Line */}
-                <line
-                  x1={fromPos.x + 30}
-                  y1={fromPos.y}
-                  x2={toPos.x - 30}
-                  y2={toPos.y}
-                  stroke={isVisitedEdge ? '#3b82f6' : '#d1d5db'}
-                  strokeWidth={isVisitedEdge ? 3 : 2}
-                  markerEnd="url(#arrowhead)"
-                  className="transition-all"
+              <g key={`${from}-${to}-${idx}`}>
+                <path
+                  d={`M ${x1} ${y1} Q ${midX + perpX * 0.2} ${midY + perpY * 0.2} ${x2} ${y2}`}
+                  stroke={isVisitedEdge ? '#3b82f6' : '#6b7280'}
+                  strokeWidth={isVisitedEdge ? 3.5 : 2.5}
+                  fill="none"
+                  markerEnd={isVisitedEdge ? 'url(#arrowhead-active)' : 'url(#arrowhead)'}
+                  className="transition-all duration-300"
+                  strokeLinecap="round"
                 />
               </g>
             );
           })}
-
-          {/* Arrow marker definition */}
-          <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="10"
-              refX="9"
-              refY="3"
-              orient="auto"
-            >
-              <polygon points="0 0, 10 3, 0 6" fill="#d1d5db" />
-            </marker>
-          </defs>
 
           {/* Draw nodes */}
           {graph.nodes.map(node => {
@@ -366,7 +547,7 @@ function TopologicalSort() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Nodes Processed</p>
-                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{currentStepData.stats?.nodesProcessed}/6</p>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{currentStepData.stats?.nodesProcessed}/{graph.nodes.length}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Edges Visited</p>
@@ -654,6 +835,65 @@ function TopologicalSort() {
                 </div>
               </div>
             )}
+
+            {/* Custom Graph Input Section */}
+            <div className="mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-600">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Custom Graph Input</h4>
+              
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Nodes (comma-separated, max 10):
+              </label>
+              <input
+                type="text"
+                value={nodesInput}
+                onChange={(e) => setNodesInput(e.target.value)}
+                placeholder="e.g., A, B, C, D"
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+              />
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Edges (format: A-&gt;B, comma-separated):
+              </label>
+              <input
+                type="text"
+                value={edgesInput}
+                onChange={(e) => setEdgesInput(e.target.value)}
+                placeholder="e.g., A->B, B->C, A->C"
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-3"
+              />
+
+              {errorMessage && (
+                <p className="text-red-600 dark:text-red-400 text-sm font-semibold mb-3">⚠️ {errorMessage}</p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={handleCustomGraph}
+                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Apply Custom Graph
+                </button>
+                <button
+                  onClick={generateRandomGraph}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Random Graph
+                </button>
+                <button
+                  onClick={resetToDefault}
+                  className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Reset to Default
+                </button>
+              </div>
+
+              <div className="mt-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  <strong>Tips:</strong> Enter nodes as single letters or words. Use -&gt; for directed edges (A-&gt;B means A points to B). 
+                  Graph must be acyclic (DAG) for topological sort to work.
+                </p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -669,12 +909,6 @@ function TopologicalSort() {
             <p className="text-gray-700 dark:text-gray-300">{currentStepData.message}</p>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 text-center shadow-lg">
-          <h2 className="text-2xl font-bold mb-2">Explore More Algorithms!</h2>
-          <p>Discover and visualize a variety of algorithms in action. Enhance your understanding with interactive demos and detailed explanations.</p>
-        </div>
       </div>
     </div>
   );

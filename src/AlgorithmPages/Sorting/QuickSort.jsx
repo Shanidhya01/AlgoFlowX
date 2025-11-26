@@ -1,511 +1,621 @@
-import React, { useState, useEffect } from "react"
-import { ChevronRight, RotateCcw, ArrowDown, BookOpen, Code } from "lucide-react"
-
-function Button({ onClick, disabled, children, className = "" }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-2 bg-black text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center dark:bg-gray-600 dark:text-white ${className}`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function Card({ children, className = "", id }) {
-  return (
-    <div id={id} className={`bg-white dark:bg-gray-800 shadow-md rounded-lg ${className}`}>
-      {children}
-    </div>
-  )
-}
+import React, { useState, useEffect, useCallback } from 'react';
+import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Zap } from 'lucide-react';
 
 function QuickSort() {
-  const [array, setArray] = useState([])
-  const [steps, setSteps] = useState([])
-  const [currentStep, setCurrentStep] = useState(0)
-  const [showExplanation, setShowExplanation] = useState(false)
-  const [showPseudocode, setShowPseudocode] = useState(false)
-  const [customInput, setCustomInput] = useState("")
-  const [inputError, setInputError] = useState("")
-  const [isRunning, setIsRunning] = useState(false)
+  const [tab, setTab] = useState('visualizer');
+  const [isRunning, setIsRunning] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [steps, setSteps] = useState([]);
+  const [animationSpeed, setAnimationSpeed] = useState(800);
 
-  const generateArray = () => {
-    const newArray = Array.from({ length: 8 }, () => Math.floor(Math.random() * 50) + 1)
-    setArray(newArray)
-    setSteps([])
-    setCurrentStep(0)
-    setIsRunning(false)
-    setCustomInput("")
-    setInputError("")
-  }
+  const initialArray = [64, 34, 25, 12, 22, 11, 90];
+  const [array, setArray] = useState(initialArray);
+  const [originalArray, setOriginalArray] = useState(initialArray);
+  const [customInput, setCustomInput] = useState(initialArray.join(', '));
+  const [errorMessage, setErrorMessage] = useState('');
 
-  const handleCustomInputChange = (e) => {
-    setCustomInput(e.target.value)
-    setInputError("")
-  }
+  const quickSort = useCallback(() => {
+    const operationSteps = [];
+    const arr = [...array];
 
-  const handleCustomArraySubmit = () => {
-    const inputArray = customInput.split(",").map((num) => Number.parseInt(num.trim(), 10))
-    if (inputArray.some(isNaN)) {
-      setInputError("Please enter valid numbers separated by commas.")
-      return
-    }
-    if (inputArray.length < 2 || inputArray.length > 16) {
-      setInputError("Please enter between 2 and 16 numbers.")
-      return
-    }
-    setArray(inputArray)
-    setSteps([])
-    setCurrentStep(0)
-    setIsRunning(false)
-    setCustomInput("")
-  }
+    operationSteps.push({
+      type: 'initialize',
+      message: `Starting Quick Sort with array: [${arr.join(', ')}]`,
+      array: [...arr],
+      pivot: null,
+      left: null,
+      right: null,
+      comparing: [],
+      stats: { comparisons: 0, swaps: 0, partitions: 0, step: 'Initialize' }
+    });
 
-  useEffect(() => {
-    generateArray()
-  }, [])
+    let comparisonCount = 0;
+    let swapCount = 0;
+    let partitionCount = 0;
 
-  const prepareQuickSort = () => {
-    const steps = []
-    const tempArray = [...array]
+    const partition = (arr, low, high) => {
+      const pivot = arr[high];
+      const pivotIndex = high;
+      partitionCount++;
 
-    const partition = (arr, low, high, level = 0) => {
-      const pivot = arr[low] // Changed to use first element as pivot
-      let i = low + 1 // Start from element next to pivot
-      let j = high
-
-      steps.push({
+      operationSteps.push({
+        type: 'select_pivot',
+        message: `Selected pivot: ${pivot} at index ${high}`,
         array: [...arr],
-        pivot: low, // Changed pivot index
-        i,
-        j,
-        low,
-        high,
-        level,
-        swapIndices: [],
-        type: 'partition-start'
-      })
+        pivot: pivotIndex,
+        left: null,
+        right: null,
+        comparing: [],
+        range: { low, high },
+        stats: { comparisons: comparisonCount, swaps: swapCount, partitions: partitionCount, step: 'Select Pivot' }
+      });
 
-      while (i <= j) {
-        // Find element greater than pivot from left
-        while (i <= high && arr[i] <= pivot) {
-          steps.push({
-            array: [...arr],
-            pivot: low,
-            comparing: i,
-            i,
-            j,
-            low,
-            high,
-            level,
-            type: 'comparing-left'
-          })
-          i++
-        }
+      let i = low - 1;
 
-        // Find element smaller than pivot from right
-        while (j > low && arr[j] > pivot) {
-          steps.push({
-            array: [...arr],
-            pivot: low,
-            comparing: j,
-            i,
-            j,
-            low,
-            high,
-            level,
-            type: 'comparing-right'
-          })
-          j--
-        }
+      for (let j = low; j < high; j++) {
+        comparisonCount++;
+        operationSteps.push({
+          type: 'compare',
+          message: `Comparing ${arr[j]} with pivot ${pivot}`,
+          array: [...arr],
+          pivot: pivotIndex,
+          left: i >= low ? i : null,
+          right: j,
+          comparing: [j],
+          range: { low, high },
+          stats: { comparisons: comparisonCount, swaps: swapCount, partitions: partitionCount, step: 'Comparing' }
+        });
 
-        // Swap if i and j haven't crossed
-        if (i < j) {
-          [arr[i], arr[j]] = [arr[j], arr[i]]
-          steps.push({
-            array: [...arr],
-            pivot: low,
-            swapIndices: [i, j],
-            i,
-            j,
-            low,
-            high,
-            level,
-            type: 'swap'
-          })
+        if (arr[j] < pivot) {
+          i++;
+          if (i !== j) {
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+            swapCount++;
+            operationSteps.push({
+              type: 'swap',
+              message: `Swapping ${arr[j]} and ${arr[i]} (both smaller than pivot)`,
+              array: [...arr],
+              pivot: pivotIndex,
+              left: i,
+              right: j,
+              comparing: [i, j],
+              range: { low, high },
+              stats: { comparisons: comparisonCount, swaps: swapCount, partitions: partitionCount, step: 'Swapping' }
+            });
+          }
         }
       }
 
       // Place pivot in correct position
-      [arr[low], arr[j]] = [arr[j], arr[low]]
-      steps.push({
+      [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+      swapCount++;
+      operationSteps.push({
+        type: 'pivot_placed',
+        message: `Placing pivot ${pivot} at its correct position (index ${i + 1})`,
         array: [...arr],
-        pivot: j,
-        swapIndices: [low, j],
-        i,
-        j,
-        low,
-        high,
-        level,
-        type: 'pivot-placement'
-      })
+        pivot: i + 1,
+        left: null,
+        right: null,
+        comparing: [i + 1],
+        range: { low, high },
+        stats: { comparisons: comparisonCount, swaps: swapCount, partitions: partitionCount, step: 'Pivot Placed' }
+      });
 
-      // Show partitioned subarrays
-      if (j - 1 - low > 0) {
-        steps.push({
-          array: [...arr],
-          pivot: j,
-          partitionRange: { start: low, end: j - 1 },
-          level: level + 1,
-          type: 'show-left-partition'
-        })
-      }
-      
-      if (high - (j + 1) > 0) {
-        steps.push({
-          array: [...arr],
-          pivot: j,
-          partitionRange: { start: j + 1, end: high },
-          level: level + 1,
-          type: 'show-right-partition'
-        })
-      }
+      return i + 1;
+    };
 
-      return j
-    }
-
-    const quickSort = (arr, low, high, level = 0) => {
+    const quickSortRecursive = (arr, low, high) => {
       if (low < high) {
-        const pi = partition(arr, low, high, level)
-        quickSort(arr, low, pi - 1, level + 1)
-        quickSort(arr, pi + 1, high, level + 1)
+        operationSteps.push({
+          type: 'partition_start',
+          message: `Partitioning subarray from index ${low} to ${high}`,
+          array: [...arr],
+          pivot: null,
+          left: null,
+          right: null,
+          comparing: [],
+          range: { low, high },
+          stats: { comparisons: comparisonCount, swaps: swapCount, partitions: partitionCount, step: 'Partition Start' }
+        });
+
+        const pi = partition(arr, low, high);
+
+        operationSteps.push({
+          type: 'partition_complete',
+          message: `Partition complete. Elements ≤ ${arr[pi]} are on left, elements > ${arr[pi]} are on right`,
+          array: [...arr],
+          pivot: pi,
+          left: null,
+          right: null,
+          comparing: [],
+          range: { low, high },
+          stats: { comparisons: comparisonCount, swaps: swapCount, partitions: partitionCount, step: 'Partition Complete' }
+        });
+
+        quickSortRecursive(arr, low, pi - 1);
+        quickSortRecursive(arr, pi + 1, high);
       }
+    };
+
+    quickSortRecursive(arr, 0, arr.length - 1);
+
+    operationSteps.push({
+      type: 'complete',
+      message: `✓ Quick Sort Complete! Sorted array: [${arr.join(', ')}]`,
+      array: arr,
+      pivot: null,
+      left: null,
+      right: null,
+      comparing: [],
+      sorted: true,
+      stats: { comparisons: comparisonCount, swaps: swapCount, partitions: partitionCount, step: 'Complete' }
+    });
+
+    return operationSteps;
+  }, [array]);
+
+  const handleSort = () => {
+    const operationSteps = quickSort();
+    setSteps(operationSteps);
+    setCurrentStep(0);
+    setIsRunning(false);
+  };
+
+  const toggleAnimation = () => {
+    setIsRunning(!isRunning);
+  };
+
+  const resetAnimation = () => {
+    setIsRunning(false);
+    setCurrentStep(0);
+    setArray(originalArray);
+    setSteps([]);
+  };
+
+  const stepForward = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
     }
+  };
 
-    quickSort(tempArray, 0, tempArray.length - 1)
-    setSteps(steps)
-    setCurrentStep(0)
-    setIsRunning(true)
-  }
+  const handleCustomInput = (input) => {
+    setCustomInput(input);
+    try {
+      const newArray = input.split(',').map(num => {
+        const parsed = parseInt(num.trim(), 10);
+        if (isNaN(parsed)) throw new Error('Invalid number');
+        return parsed;
+      });
+      if (newArray.length === 0) throw new Error('Array is empty');
+      if (newArray.length > 15) throw new Error('Maximum 15 elements allowed');
+      if (newArray.length < 2) throw new Error('Minimum 2 elements required');
+      setArray(newArray);
+      setOriginalArray(newArray);
+      setErrorMessage('');
+      setIsRunning(false);
+      setCurrentStep(0);
+      setSteps([]);
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  };
 
-  const renderArrayBox = (arr, highlights = {}) => (
-    <div className="flex flex-col items-center">
-      <div className="flex flex-wrap justify-center gap-2 mb-1">
-        {arr.map((_, idx) => (
-          <div
-            key={idx}
-            className={`w-8 sm:w-10 md:w-12 text-center text-xs sm:text-sm 
-              ${highlights.i === idx ? 'text-blue-600 dark:text-blue-400 font-bold' : 
-                highlights.j === idx ? 'text-yellow-600 dark:text-yellow-400 font-bold' : 
-                'text-gray-600 dark:text-gray-400'}`}
-          >
-            [{idx}]
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-wrap justify-center gap-2">
-        {arr.map((num, idx) => {
-          let bgColor = "bg-white dark:bg-gray-700"
-          if (highlights.pivot === idx) {
-            bgColor = "bg-red-200 dark:bg-red-700"
-          } else if (highlights.comparing === idx) {
-            bgColor = "bg-yellow-200 dark:bg-yellow-700"
-          } else if (highlights.swapIndices?.includes(idx)) {
-            bgColor = "bg-blue-200 dark:bg-blue-700"
-          } else if (highlights.partitionRange && 
-                    idx >= highlights.partitionRange.start && 
-                    idx <= highlights.partitionRange.end) {
-            bgColor = "bg-purple-200 dark:bg-purple-700"
-          }
-          
-          return (
-            <div
-              key={idx}
-              className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center ${bgColor} border border-gray-300 dark:border-gray-600 rounded-lg font-semibold text-gray-900 dark:text-white text-xs sm:text-sm md:text-base`}
-            >
-              {num}
+  const generateRandomArray = () => {
+    const newArray = Array.from({ length: 8 }, () => Math.floor(Math.random() * 50) + 1);
+    setArray(newArray);
+    setOriginalArray(newArray);
+    setCustomInput(newArray.join(', '));
+    setErrorMessage('');
+    setIsRunning(false);
+    setCurrentStep(0);
+    setSteps([]);
+  };
+
+  useEffect(() => {
+    if (isRunning && currentStep < steps.length - 1) {
+      const timer = setTimeout(() => {
+        setCurrentStep(currentStep + 1);
+      }, animationSpeed);
+      return () => clearTimeout(timer);
+    } else if (currentStep >= steps.length - 1) {
+      setIsRunning(false);
+    }
+  }, [isRunning, currentStep, steps.length, animationSpeed]);
+
+  const currentStepData = steps[currentStep] || {};
+
+  const renderVisualizer = () => (
+    <div className="space-y-6">
+      <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+        <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+          <Zap className="text-blue-600" size={28} />
+          Quick Sort Visualization
+        </h3>
+
+        <div className="grid lg:grid-cols-3 gap-8 mb-6">
+          {/* Array Visualization */}
+          <div className="lg:col-span-2 space-y-6">
+            <div>
+              <h4 className="text-lg font-semibold mb-3 text-gray-800 dark:text-white">
+                {currentStepData.sorted ? 'Sorted Array' : 'Current State'}
+              </h4>
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 flex flex-wrap gap-2">
+                {currentStepData.array?.map((num, idx) => {
+                  let bgColor = 'bg-blue-500 dark:bg-blue-700';
+                  if (currentStepData.sorted) {
+                    bgColor = 'bg-green-500 dark:bg-green-700';
+                  } else if (currentStepData.pivot === idx) {
+                    bgColor = 'bg-red-500 dark:bg-red-700';
+                  } else if (currentStepData.comparing?.includes(idx)) {
+                    bgColor = 'bg-yellow-400 dark:bg-yellow-600';
+                  } else if (currentStepData.left === idx) {
+                    bgColor = 'bg-purple-400 dark:bg-purple-600';
+                  } else if (currentStepData.right === idx) {
+                    bgColor = 'bg-orange-400 dark:bg-orange-600';
+                  }
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`w-14 h-14 flex items-center justify-center rounded-lg font-bold text-lg transition-all transform ${bgColor} text-white shadow-md border-2 border-gray-300 dark:border-gray-600`}
+                    >
+                      {num}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          )
-        })}
+
+            {/* Partition Range Indicator */}
+            {currentStepData.range && (
+              <div className="bg-purple-50 dark:bg-purple-900/30 rounded-lg p-4">
+                <h4 className="text-sm font-semibold mb-2 text-gray-800 dark:text-white">Current Partition Range</h4>
+                <div className="flex items-center gap-4">
+                  <div className="text-sm">
+                    <span className="font-mono bg-purple-200 dark:bg-purple-700 px-2 py-1 rounded">Low: {currentStepData.range.low}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-mono bg-purple-200 dark:bg-purple-700 px-2 py-1 rounded">High: {currentStepData.range.high}</span>
+                  </div>
+                  {currentStepData.pivot !== null && (
+                    <div className="text-sm">
+                      <span className="font-mono bg-red-200 dark:bg-red-700 px-2 py-1 rounded">Pivot: {currentStepData.array[currentStepData.pivot]}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Statistics */}
+          <div className="space-y-4">
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900 dark:to-purple-900 rounded-lg p-4 border-2 border-blue-300 dark:border-blue-700">
+              <h4 className="font-semibold text-gray-800 dark:text-white mb-3">Statistics</h4>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Comparisons</p>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{currentStepData.stats?.comparisons || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Swaps</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{currentStepData.stats?.swaps || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Partitions</p>
+                  <p className="text-3xl font-bold text-orange-600 dark:text-orange-400">{currentStepData.stats?.partitions || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Current Step</p>
+                  <p className="text-xl font-bold text-purple-600 dark:text-purple-400">{currentStepData.stats?.step || 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-300 dark:border-gray-600">
+              <h4 className="font-semibold text-gray-800 dark:text-white mb-3">Color Legend</h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 italic">Colors appear during sorting animation</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-blue-500 dark:bg-blue-700 border border-gray-400"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Unsorted elements</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-red-500 dark:bg-red-700 border border-gray-400"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Pivot element</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-yellow-400 dark:bg-yellow-600 border border-gray-400"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Comparing with pivot</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-purple-400 dark:bg-purple-600 border border-gray-400"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Left pointer (i)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-orange-400 dark:bg-orange-600 border border-gray-400"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Right pointer (j)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-green-500 dark:bg-green-700 border border-gray-400"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Fully sorted</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
-  )
+  );
 
-  const renderStep = () => {
-    const step = steps[currentStep]
-    if (!step) return null
+  const TheorySection = () => (
+    <div className="bg-white/95 dark:bg-gray-800 rounded-lg p-6 shadow-lg space-y-6">
+      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+        Quick Sort Theory
+      </h2>
 
-    let description = ""
-    let indices = ""
-    let partitionInfo = ""
-
-    switch (step.type) {
-      case 'partition-start':
-        description = `Starting partition with pivot element ${step.array[step.pivot]} (first element)`
-        indices = `Pivot Index: ${step.pivot}, i: ${step.i}, j: ${step.j}`
-        partitionInfo = `Level: ${step.level}`
-        break
-      case 'comparing-left':
-        description = `Looking for element greater than pivot ${step.array[step.pivot]} from left`
-        indices = `Pivot Index: ${step.pivot}, i: ${step.i}, j: ${step.j}`
-        partitionInfo = `Level: ${step.level}`
-        break
-      case 'comparing-right':
-        description = `Looking for element smaller than pivot ${step.array[step.pivot]} from right`
-        indices = `Pivot Index: ${step.pivot}, i: ${step.i}, j: ${step.j}`
-        partitionInfo = `Level: ${step.level}`
-        break
-      case 'swap':
-        description = `Swapping elements ${step.array[step.swapIndices[0]]} and ${step.array[step.swapIndices[1]]}`
-        indices = `Pivot Index: ${step.pivot}, i: ${step.i}, j: ${step.j}`
-        partitionInfo = `Level: ${step.level}`
-        break
-      case 'pivot-placement':
-        description = `Placing pivot ${step.array[step.pivot]} in its correct position`
-        indices = `Final Pivot Position: ${step.pivot}`
-        partitionInfo = `Level: ${step.level}`
-        break
-      case 'show-left-partition':
-        description = `Left partition to be sorted`
-        partitionInfo = `Level: ${step.level}, Range: [${step.partitionRange.start}, ${step.partitionRange.end}]`
-        break
-      case 'show-right-partition':
-        description = `Right partition to be sorted`
-        partitionInfo = `Level: ${step.level}, Range: [${step.partitionRange.start}, ${step.partitionRange.end}]`
-        break
-      default:
-        description = "Processing array"
-    }
-
-    return (
       <div className="space-y-4">
         <div>
-          {renderArrayBox(step.array, {
-            pivot: step.pivot,
-            comparing: step.comparing,
-            swapIndices: step.swapIndices,
-            partitionRange: step.partitionRange,
-            i: step.i,
-            j: step.j
-          })}
+          <h3 className="text-xl font-semibold mb-2">What is Quick Sort?</h3>
+          <p className="text-gray-700 dark:text-gray-300">
+            Quick Sort is a highly efficient divide-and-conquer sorting algorithm that works by selecting a 'pivot' element and partitioning the array around it. Elements smaller than the pivot go to the left, and larger elements go to the right. This process is repeated recursively.
+          </p>
         </div>
-        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-2">
-          <p className="text-sm text-gray-700 dark:text-gray-300">{description}</p>
-          {indices && (
-            <p className="text-sm font-mono bg-gray-100 dark:bg-gray-600 p-2 rounded">
-              {indices}
-            </p>
-          )}
-          {partitionInfo && (
-            <p className="text-sm font-mono bg-gray-100 dark:bg-gray-600 p-2 rounded">
-              {partitionInfo}
-            </p>
-          )}
-          <div className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-            <span className="text-blue-600 dark:text-blue-400 font-bold">i</span> and{" "}
-            <span className="text-yellow-600 dark:text-yellow-400 font-bold">j</span> indices are highlighted above the array
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 border-l-4 border-blue-500">
+            <h4 className="font-semibold mb-2 text-blue-700 dark:text-blue-300">Algorithm Steps</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300 text-sm">
+              <li>Choose a pivot element</li>
+              <li>Partition array around pivot</li>
+              <li>Move smaller elements left</li>
+              <li>Move larger elements right</li>
+              <li>Recursively sort subarrays</li>
+              <li>Combine sorted parts</li>
+            </ul>
+          </div>
+
+          <div className="bg-green-50 dark:bg-green-900 rounded-lg p-4 border-l-4 border-green-500">
+            <h4 className="font-semibold mb-2 text-green-700 dark:text-green-300">Characteristics</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300 text-sm">
+              <li>Average Time: O(n log n)</li>
+              <li>Worst Time: O(n²)</li>
+              <li>Space: O(log n)</li>
+              <li>In-place sorting</li>
+              <li>Cache-efficient</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 dark:bg-purple-900 rounded-lg p-4">
+          <h4 className="font-semibold mb-3">When to Use Quick Sort</h4>
+          <div className="space-y-2 text-gray-700 dark:text-gray-300 text-sm">
+            <p>Quick Sort is ideal when:</p>
+            <p className="ml-4">• Average O(n log n) performance is acceptable</p>
+            <p className="ml-4">• In-place sorting is required (low memory)</p>
+            <p className="ml-4">• Cache efficiency matters</p>
+            <p className="ml-4">• Internal sorting (all data fits in memory)</p>
+          </div>
+        </div>
+
+        <div className="bg-orange-50 dark:bg-orange-900 rounded-lg p-4">
+          <h4 className="font-semibold mb-3">Complexity Analysis</h4>
+          <div className="space-y-2 text-gray-700 dark:text-gray-300 text-sm font-mono">
+            <p>Best/Average Time: <span className="font-bold">O(n log n)</span></p>
+            <p className="text-xs">Good pivot selection divides array evenly</p>
+            <p>Worst Time: <span className="font-bold">O(n²)</span></p>
+            <p className="text-xs">Occurs with already sorted array (poor pivot)</p>
+            <p>Space: <span className="font-bold">O(log n)</span></p>
+            <p className="text-xs">Recursion stack depth</p>
           </div>
         </div>
       </div>
-    )
-  }
+    </div>
+  );
 
-  const renderExplanation = () => (
-    <Card id="whyQuickSort" className="p-6 mb-6">
-      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Why Quick Sort?</h3>
-      <div className="space-y-4 text-gray-800 dark:text-gray-200">
-        <div>
-          <h4 className="font-semibold">1. Efficiency</h4>
-          <p>
-            QuickSort has an average time complexity of O(n log n), making it one of the fastest sorting algorithms in practice.
-          </p>
+  const PseudocodeSection = () => (
+    <div className="bg-white/95 dark:bg-gray-800 rounded-lg p-6 shadow-lg space-y-4">
+      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 mb-6">
+        Quick Sort Implementation
+      </h2>
+
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border">
+        <h4 className="font-semibold mb-3 text-lg">Algorithm</h4>
+        <pre className="bg-gray-900 text-gray-100 rounded-md p-4 overflow-x-auto text-xs md:text-sm font-mono leading-relaxed">
+          <code>{`function quickSort(arr, low, high):
+  if low < high:
+    // Partition and get pivot index
+    pi = partition(arr, low, high)
+    
+    // Recursively sort left and right
+    quickSort(arr, low, pi - 1)
+    quickSort(arr, pi + 1, high)
+
+function partition(arr, low, high):
+  pivot = arr[high]  // Choose last element
+  i = low - 1        // Index of smaller element
+  
+  for j from low to high - 1:
+    if arr[j] < pivot:
+      i++
+      swap arr[i] with arr[j]
+  
+  // Place pivot in correct position
+  swap arr[i + 1] with arr[high]
+  return i + 1`}</code>
+        </pre>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+          <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-300">Advantages</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <li>Fast average O(n log n)</li>
+            <li>In-place sorting</li>
+            <li>Cache-efficient</li>
+            <li>Low memory overhead</li>
+            <li>Good practical performance</li>
+          </ul>
         </div>
-        <div>
-          <h4 className="font-semibold">2. In-Place Sorting</h4>
-          <p>
-            Unlike Merge Sort, QuickSort is an in-place sorting algorithm, requiring only O(log n) additional space.
-          </p>
-        </div>
-        <div>
-          <h4 className="font-semibold">3. Cache Efficiency</h4>
-          <p>QuickSort is cache-friendly as it works with contiguous blocks of memory.</p>
-        </div>
-        <div>
-          <h4 className="font-semibold">4. Time Complexity</h4>
-          <p>
-            - Best Case: O(n log n)
-            <br />- Average Case: O(n log n)
-            <br />- Worst Case: O(n²)
-          </p>
-        </div>
-        <div>
-          <h4 className="font-semibold">5. Space Complexity</h4>
-          <p>O(log n)</p>
-          <p className="mt-2">
-            QuickSort requires less additional space compared to Merge Sort, making it more memory efficient.
-          </p>
+
+        <div className="bg-green-50 dark:bg-green-900 rounded-lg p-4 border border-green-200 dark:border-green-700">
+          <h4 className="font-semibold mb-2 text-green-900 dark:text-green-300">Disadvantages</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <li>Worst case O(n²)</li>
+            <li>Not stable (default)</li>
+            <li>Poor on sorted data</li>
+            <li>Pivot selection critical</li>
+            <li>Recursive overhead</li>
+          </ul>
         </div>
       </div>
-    </Card>
-  )
-
-  const renderPseudocode = () => (
-    <Card id="quickSortPseudocode" className="p-6 mb-6">
-      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Quick Sort Pseudocode</h3>
-      <pre className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg overflow-x-auto text-gray-900 dark:text-white">
-        {`// Main quicksort function
-quickSort(array, low, high):
-    if low < high:
-        // pi is partitioning index
-        pi = partition(array, low, high)
-        
-        // Separately sort elements before and after partition
-        quickSort(array, low, pi - 1)
-        quickSort(array, pi + 1, high)
-
-// Partition function
-partition(array, low, high):
-    pivot = array[high]    // Choose rightmost element as pivot
-    i = low - 1           // Index of smaller element
-    
-    for j = low to high - 1:
-        // If current element is smaller than or equal to pivot
-        if array[j] <= pivot:
-            i = i + 1     // Increment index of smaller element
-            swap array[i] with array[j]
-    
-    swap array[i + 1] with array[high]  // Place pivot in correct position
-    return i + 1          // Return pivot's final position`}
-      </pre>
-    </Card>
-  )
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4 sm:p-6 md:p-8">
-      <div className="max-w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl mx-auto">
-        <Card className="p-6 mb-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-4 sm:mb-0">
-              Quick Sort Visualization
-            </h1>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                onClick={() => {
-                  setShowExplanation(!showExplanation)
-                  if (!showExplanation) {
-                    setTimeout(() => {
-                      document.getElementById("whyQuickSort")?.scrollIntoView({ behavior: "smooth" })
-                    }, 100)
-                  }
-                }}
-                className="text-sm"
-              >
-                <BookOpen className="w-5 h-5 mr-2" />
-                Why Quick Sort?
-              </Button>
-              <Button
-                onClick={() => {
-                  setShowPseudocode(!showPseudocode)
-                  if (!showPseudocode) {
-                    setTimeout(() => {
-                      document.getElementById("quickSortPseudocode")?.scrollIntoView({ behavior: "smooth" })
-                    }, 100)
-                  }
-                }}
-                className="text-sm"
-              >
-                <Code className="w-5 h-5 mr-2" />
-                Show Pseudocode
-              </Button>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-3">
+            Quick Sort Visualizer
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            Watch the efficient partition-based algorithm select pivots and recursively sort subarrays.
+          </p>
+        </div>
 
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Custom Array Input:</h2>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+        {/* Tab Navigation */}
+        <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 shadow-lg mb-6">
+          <div className="flex flex-wrap gap-2 justify-center">
+            {[
+              { id: 'visualizer', label: 'Visualizer', icon: Zap },
+              { id: 'theory', label: 'Theory', icon: BookOpen },
+              { id: 'pseudocode', label: 'Algorithm', icon: Code }
+            ].map(t => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                    tab === t.id
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-400'
+                  }`}
+                >
+                  <Icon size={18} /> {t.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Controls */}
+        {tab === 'visualizer' && (
+          <div className="bg-white/80 dark:bg-gray-800 rounded-lg p-6 shadow-lg mb-6">
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <button
+                onClick={handleSort}
+                disabled={isRunning}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                <Zap size={18} /> Sort
+              </button>
+
+              <button
+                onClick={toggleAnimation}
+                disabled={steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                {isRunning ? <Pause size={18} /> : <Play size={18} />}
+                {isRunning ? 'Pause' : 'Play'}
+              </button>
+
+              <button
+                onClick={stepForward}
+                disabled={currentStep >= steps.length - 1 || steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                <StepForward size={18} /> Step
+              </button>
+
+              <button
+                onClick={resetAnimation}
+                disabled={steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                <RotateCcw size={18} /> Reset
+              </button>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm font-medium">Speed:</span>
+                <select
+                  value={animationSpeed}
+                  onChange={(e) => setAnimationSpeed(parseInt(e.target.value))}
+                  className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={1500}>Slow</option>
+                  <option value={800}>Normal</option>
+                  <option value={300}>Fast</option>
+                </select>
+              </div>
+            </div>
+
+            {steps.length > 0 && (
+              <div>
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <span>Step {currentStep + 1} of {steps.length}</span>
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">{steps[currentStep]?.type?.toUpperCase().replace(/_/g, ' ')}</span>
+                </div>
+                <div className="w-full bg-gray-300 dark:bg-gray-600 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Input Section */}
+            <div className="mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-600">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Enter Custom Array (comma-separated integers):
+              </label>
               <input
                 type="text"
                 value={customInput}
-                onChange={handleCustomInputChange}
-                placeholder="Enter numbers separated by commas"
-                className="w-full sm:w-auto flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                onChange={(e) => handleCustomInput(e.target.value)}
+                placeholder="e.g., 64, 34, 25, 12, 22, 11, 90"
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
               />
-              <Button onClick={handleCustomArraySubmit}>Set Custom Array</Button>
-            </div>
-            {inputError && <p className="text-red-500 mt-2">{inputError}</p>}
-          </div>
-
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2 text-gray-900 dark:text-white">Current Array:</h2>
-            {renderArrayBox(array)}
-          </div>
-
-          {isRunning && steps.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-                Step {currentStep + 1} of {steps.length}
-              </h2>
-              {renderStep()}
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
-            <Button onClick={generateArray}>
-              <RotateCcw className="w-5 h-5 mr-2" />
-              New Array
-            </Button>
-
-            {!isRunning && <Button onClick={prepareQuickSort}>Start Quick Sort</Button>}
-
-            {isRunning && (
-              <>
-                <Button onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))} disabled={currentStep === 0}>
-                  Previous Step
-                </Button>
-                <Button
-                  onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))}
-                  disabled={currentStep === steps.length - 1}
-                >
-                  Next Step <ChevronRight className="ml-2 w-5 h-5" />
-                </Button>
-              </>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-4 sm:p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Color Guide</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex items-center">
-              <div className="w-6 h-6 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded mr-2"></div>
-              <span className="text-gray-900 dark:text-white">Unsorted Elements</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-6 h-6 bg-red-200 dark:bg-red-700 border border-gray-300 dark:border-gray-600 rounded mr-2"></div>
-              <span className="text-gray-900 dark:text-white">Pivot Element</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-6 h-6 bg-yellow-200 dark:bg-yellow-700 border border-gray-300 dark:border-gray-600 rounded mr-2"></div>
-              <span className="text-gray-900 dark:text-white">Element Being Compared</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-6 h-6 bg-blue-200 dark:bg-blue-700 border border-gray-300 dark:border-gray-600 rounded mr-2"></div>
-              <span className="text-gray-900 dark:text-white">Elements Being Swapped</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-6 h-6 bg-purple-200 dark:bg-purple-700 border border-gray-300 dark:border-gray-600 rounded mr-2"></div>
-              <span className="text-gray-900 dark:text-white">Current Partition Range</span>
+              {errorMessage && (
+                <p className="text-red-600 dark:text-red-400 text-sm font-semibold mb-2">⚠️ {errorMessage}</p>
+              )}
+              <button
+                onClick={generateRandomArray}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Generate Random Array
+              </button>
             </div>
           </div>
-        </Card>
+        )}
 
-        {showExplanation && renderExplanation()}
-        {showPseudocode && renderPseudocode()}
+        {/* Main Content */}
+        {tab === 'visualizer' && renderVisualizer()}
+        {tab === 'theory' && <div className="mt-6"><TheorySection /></div>}
+        {tab === 'pseudocode' && <div className="mt-6"><PseudocodeSection /></div>}
+
+        {/* Step Information */}
+        {tab === 'visualizer' && steps[currentStep] && (
+          <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg mt-6 border-l-4 border-blue-500">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Current Step</h3>
+            <p className="text-gray-700 dark:text-gray-300">{currentStepData.message}</p>
+          </div>
+        )}
       </div>
     </div>
-  )
+  );
 }
 
 export default QuickSort;
