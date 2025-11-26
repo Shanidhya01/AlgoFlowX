@@ -1,120 +1,151 @@
-'use client';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Zap } from 'lucide-react';
 
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Play, RotateCcw, Code, BookOpen, RefreshCw } from 'lucide-react';
-
-const DEFAULT_ARRAY_SIZE = 10;
-const ANIMATION_DURATION = 0.5;
-
-function Button({ onClick, disabled, children, className }) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className={`px-4 py-2 bg-black text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center dark:bg-gray-600 dark:text-white ${className}`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Input({ type, placeholder, onChange, className, value }) {
-  return (
-    <input
-      type={type}
-      placeholder={placeholder}
-      onChange={onChange}
-      value={value}
-      className={`px-3 py-2 border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white ${className}`}
-    />
-  );
-}
-
-function Card({ children, className }) {
-  return (
-    <div className={`bg-white dark:bg-gray-800 shadow-md rounded-lg ${className}`}>
-      {children}
-    </div>
-  );
-}
-
-function PseudoCode() {
-  return (
-    <Card className="mt-4 bg-white dark:bg-gray-800">
-      <div className="p-4">
-        <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Insertion Sort Pseudo-code</h3>
-        <pre className="text-sm bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white p-4 rounded-md overflow-x-auto">
-          {`function insertionSort(arr):
-    n = arr.length
-    for i from 1 to n-1:
-        key = arr[i]
-        j = i - 1
-        while j >= 0 and arr[j] > key:
-            arr[j + 1] = arr[j]
-            j = j - 1
-        arr[j + 1] = key
-    return arr`}
-        </pre>
-      </div>
-    </Card>
-  );
-}
-
-function Theory() {
-  return (
-    <Card className="mt-4">
-      <div className="p-4">
-        <h3 className="text-lg font-semibold mb-2">Insertion Sort Theory</h3>
-        <p className="mb-2">
-          Insertion Sort is a simple sorting algorithm that builds the final sorted array one item at a time. It is much less efficient on large lists than more advanced algorithms such as quicksort, heapsort, or merge sort.
-        </p>
-        <h4 className="font-semibold mt-2">How it works:</h4>
-        <ol className="list-decimal pl-5 space-y-1">
-          <li>Start with the second element (index 1)</li>
-          <li>Compare it with the elements before it</li>
-          <li>If the element is smaller, shift the larger elements to the right</li>
-          <li>Insert the element in its correct position</li>
-          <li>Move to the next element and repeat steps 2-4 until the end of the array</li>
-        </ol>
-        <h4 className="font-semibold mt-2">Characteristics:</h4>
-        <ul className="list-disc pl-5 space-y-1">
-          <li>Time Complexity: O(n²) - not efficient for large datasets</li>
-          <li>Space Complexity: O(1) - only requires a constant amount of additional memory space</li>
-          <li>Stable sorting algorithm</li>
-          <li>Adaptive: efficient for data sets that are already substantially sorted</li>
-          <li>Simple implementation</li>
-          <li>Efficient for small data sets</li>
-        </ul>
-      </div>
-    </Card>
-  );
-}
-
-export default function InsertionSort() {
-  const [array, setArray] = useState([]);
+function InsertionSort() {
+  const [tab, setTab] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState([]);
-  const [currentStep, setCurrentStep] = useState(-1);
-  const [stepDescriptions, setStepDescriptions] = useState([]);
-  const [isSorting, setIsSorting] = useState(false);
-  const [isSorted, setIsSorted] = useState(false);
-  const [showPseudoCode, setShowPseudoCode] = useState(false);
-  const [showTheory, setShowTheory] = useState(false);
-  const [customArrayInput, setCustomArrayInput] = useState('');
+  const [animationSpeed, setAnimationSpeed] = useState(500);
+
+  const initialArray = [64, 34, 25, 12, 22, 11, 90, 88, 45, 50];
+  const [array, setArray] = useState(initialArray);
+  const [originalArray, setOriginalArray] = useState(initialArray);
+  const [customInput, setCustomInput] = useState(initialArray.join(', '));
   const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
-    generateRandomArray();
-  }, []);
+  const insertionSort = useCallback(() => {
+    const operationSteps = [];
+    const arr = [...array];
+    const n = arr.length;
+    let comparisons = 0;
+    let shifts = 0;
 
-  const generateRandomArray = () => {
-    const newArray = Array.from({ length: DEFAULT_ARRAY_SIZE }, () => Math.floor(Math.random() * 100) + 1);
-    setArray(newArray);
-    setCustomArrayInput(newArray.join(', '));
+    operationSteps.push({
+      type: 'initialize',
+      message: `Starting Insertion Sort with array: [${arr.join(', ')}]`,
+      array: [...arr],
+      current: null,
+      comparing: [],
+      inserting: null,
+      stats: { comparisons: 0, shifts: 0, pass: 0 }
+    });
+
+    for (let i = 1; i < n; i++) {
+      let key = arr[i];
+      let j = i - 1;
+
+      operationSteps.push({
+        type: 'select_key',
+        message: `Selected key = arr[${i}] = ${key} to insert`,
+        array: [...arr],
+        current: i,
+        comparing: [],
+        inserting: null,
+        stats: { comparisons, shifts, pass: i }
+      });
+
+      let passComparisons = 0;
+      while (j >= 0 && arr[j] > key) {
+        comparisons++;
+        passComparisons++;
+
+        operationSteps.push({
+          type: 'comparing',
+          message: `Comparing arr[${j}]=${arr[j]} with key=${key}. arr[${j}] > key, need to shift`,
+          array: [...arr],
+          current: i,
+          comparing: [j, i],
+          inserting: null,
+          stats: { comparisons, shifts, pass: i }
+        });
+
+        arr[j + 1] = arr[j];
+        shifts++;
+
+        operationSteps.push({
+          type: 'shifting',
+          message: `Shifted arr[${j}]=${arr[j + 1]} to position ${j + 1}`,
+          array: [...arr],
+          current: i,
+          comparing: [j + 1],
+          inserting: null,
+          stats: { comparisons, shifts, pass: i }
+        });
+
+        j--;
+      }
+
+      arr[j + 1] = key;
+
+      operationSteps.push({
+        type: 'insert',
+        message: `Inserted ${key} at index ${j + 1}. Pass ${i} complete.`,
+        array: [...arr],
+        current: i,
+        comparing: [],
+        inserting: j + 1,
+        stats: { comparisons, shifts, pass: i }
+      });
+    }
+
+    operationSteps.push({
+      type: 'complete',
+      message: `✓ Insertion Sort Complete! Total comparisons: ${comparisons}, Total shifts: ${shifts}`,
+      array: [...arr],
+      current: null,
+      comparing: [],
+      inserting: null,
+      stats: { comparisons, shifts, pass: n - 1 }
+    });
+
+    return operationSteps;
+  }, [array]);
+
+  const handleSort = () => {
+    const operationSteps = insertionSort();
+    setSteps(operationSteps);
+    setCurrentStep(0);
+    setIsRunning(false);
   };
 
-  const handleCustomArrayInput = (input) => {
-    setCustomArrayInput(input);
+  const toggleAnimation = () => {
+    setIsRunning(!isRunning);
+  };
+
+  const resetAnimation = () => {
+    setIsRunning(false);
+    setCurrentStep(0);
+    setArray(originalArray);
+  };
+
+  const stepForward = () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  useEffect(() => {
+    if (isRunning && currentStep < steps.length - 1) {
+      const timer = setTimeout(() => {
+        setCurrentStep(currentStep + 1);
+      }, animationSpeed);
+      return () => clearTimeout(timer);
+    } else if (currentStep >= steps.length - 1) {
+      setIsRunning(false);
+    }
+  }, [isRunning, currentStep, steps.length, animationSpeed]);
+
+  useEffect(() => {
+    if (steps[currentStep]) {
+      setArray(steps[currentStep].array || []);
+    }
+  }, [currentStep, steps]);
+
+  const currentStepData = steps[currentStep] || {};
+
+  const handleCustomInput = (input) => {
+    setCustomInput(input);
     try {
       const newArray = input.split(',').map(num => {
         const parsed = parseInt(num.trim(), 10);
@@ -122,162 +153,380 @@ export default function InsertionSort() {
         return parsed;
       });
       if (newArray.length === 0) throw new Error('Array is empty');
-      if (newArray.length > 20) throw new Error('Array size should not exceed 20 elements');
+      if (newArray.length > 20) throw new Error('Maximum 20 elements allowed');
       setArray(newArray);
+      setOriginalArray(newArray);
       setErrorMessage('');
+      setIsRunning(false);
+      setCurrentStep(0);
+      setSteps([]);
     } catch (error) {
       setErrorMessage(error.message);
     }
   };
 
-  const insertionSort = (arr) => {
-    const steps = [];
-    const descriptions = [];
-    const n = arr.length;
-    const sortedArr = [...arr];
-
-    for (let i = 1; i < n; i++) {
-      let key = sortedArr[i];
-      let j = i - 1;
-
-      steps.push({ array: [...sortedArr], current: i, comparing: [i, j] });
-      descriptions.push(`Start inserting element ${key} at index ${i}`);
-
-      while (j >= 0 && sortedArr[j] > key) {
-        sortedArr[j + 1] = sortedArr[j];
-        j = j - 1;
-
-        steps.push({ array: [...sortedArr], current: i, comparing: [j + 1, j], shifting: true });
-        descriptions.push(`Shift ${sortedArr[j + 1]} to the right`);
-      }
-
-      sortedArr[j + 1] = key;
-      steps.push({ array: [...sortedArr], current: i, inserting: j + 1 });
-      descriptions.push(`Insert ${key} at index ${j + 1}`);
-    }
-
-    return [steps, descriptions];
-  };
-
-  const handleSort = () => {
-    const [sortSteps, sortDescriptions] = insertionSort([...array]);
-    setSteps(sortSteps);
-    setStepDescriptions(sortDescriptions);
+  const generateRandomArray = () => {
+    const newArray = Array.from({ length: 10 }, () => Math.floor(Math.random() * 100) + 1);
+    setArray(newArray);
+    setOriginalArray(newArray);
+    setCustomInput(newArray.join(', '));
+    setErrorMessage('');
+    setIsRunning(false);
     setCurrentStep(0);
-    setIsSorting(true);
-    setIsSorted(false);
+    setSteps([]);
   };
 
-  const handleStepForward = () => {
-    if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
-      setArray(steps[currentStep + 1].array);
-      if (currentStep + 1 === steps.length - 1) {
-        setIsSorted(true);
-      }
-    }
-  };
+  const render = () => (
+    <div className="space-y-6">
+      <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+        <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+          <Zap className="text-blue-600" size={28} />
+          Insertion Sort Visualization
+        </h3>
 
-  const handleStepBackward = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-      setArray(steps[currentStep - 1].array);
-    }
-  };
+        <div className="grid lg:grid-cols-3 gap-8 mb-6">
+          {/* Array Visualization */}
+          <div className="lg:col-span-2">
+            <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-8 flex flex-wrap justify-center gap-2 min-h-64">
+              {array.map((num, idx) => {
+                const isCurrent = currentStepData.current === idx;
+                const isComparing = currentStepData.comparing?.includes(idx);
+                const isInserting = currentStepData.inserting === idx;
 
-  const handleReset = () => {
-    setCurrentStep(-1);
-    setIsSorting(false);
-    setIsSorted(false);
-    generateRandomArray();
-  };
+                return (
+                  <div
+                    key={idx}
+                    className={`w-14 h-14 flex items-center justify-center rounded-lg font-bold text-lg transition-all transform ${
+                      isCurrent
+                        ? 'bg-blue-400 dark:bg-blue-600 scale-110 shadow-lg'
+                        : isInserting
+                        ? 'bg-purple-400 dark:bg-purple-600 scale-110 shadow-lg'
+                        : isComparing
+                        ? 'bg-yellow-400 dark:bg-yellow-600 scale-110 shadow-lg'
+                        : 'bg-blue-500 dark:bg-blue-700 shadow-md'
+                    } text-white border-2 border-gray-300 dark:border-gray-600`}
+                  >
+                    {num}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Statistics */}
+          <div className="space-y-4">
+            <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900 dark:to-purple-900 rounded-lg p-4 border-2 border-blue-300 dark:border-blue-700">
+              <h4 className="font-semibold text-gray-800 dark:text-white mb-3">Statistics</h4>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Comparisons</p>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{currentStepData.stats?.comparisons || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Shifts</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{currentStepData.stats?.shifts || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Current Pass</p>
+                  <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{currentStepData.stats?.pass || 0}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-300 dark:border-gray-600">
+              <h4 className="font-semibold text-gray-800 dark:text-white mb-3">Legend</h4>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-blue-500 dark:bg-blue-700"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Normal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-blue-400 dark:bg-blue-600"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Current Key</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-yellow-400 dark:bg-yellow-600"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Comparing</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-purple-400 dark:bg-purple-600"></div>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Inserting</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const TheorySection = () => (
+    <div className="bg-white/95 dark:bg-gray-800 rounded-lg p-6 shadow-lg space-y-6">
+      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
+        Insertion Sort Theory
+      </h2>
+
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-xl font-semibold mb-2">What is Insertion Sort?</h3>
+          <p className="text-gray-700 dark:text-gray-300">
+            Insertion Sort is a simple comparison-based sorting algorithm that builds the final sorted array one item at a time. It iterates through an input array, and for each iteration, it removes one element from the array and finds the place it belongs in the sorted part of the array.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 border-l-4 border-blue-500">
+            <h4 className="font-semibold mb-2 text-blue-700 dark:text-blue-300">Algorithm Steps</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300 text-sm">
+              <li>Start with second element</li>
+              <li>Compare with previous elements</li>
+              <li>Shift larger elements right</li>
+              <li>Insert at correct position</li>
+              <li>Move to next element</li>
+              <li>Repeat until sorted</li>
+            </ul>
+          </div>
+
+          <div className="bg-green-50 dark:bg-green-900 rounded-lg p-4 border-l-4 border-green-500">
+            <h4 className="font-semibold mb-2 text-green-700 dark:text-green-300">Characteristics</h4>
+            <ul className="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300 text-sm">
+              <li>Time Complexity: O(n²)</li>
+              <li>Space Complexity: O(1)</li>
+              <li>Stable sorting algorithm</li>
+              <li>Adaptive (efficient for nearly sorted)</li>
+              <li>In-place sorting</li>
+              <li>Good for small datasets</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 dark:bg-purple-900 rounded-lg p-4">
+          <h4 className="font-semibold mb-3">How It Works Visually</h4>
+          <div className="space-y-2 text-gray-700 dark:text-gray-300 text-sm">
+            <p>In each iteration:</p>
+            <p className="ml-4">• Take the current element as the key</p>
+            <p className="ml-4">• Compare with elements to the left</p>
+            <p className="ml-4">• Shift larger elements to the right</p>
+            <p className="ml-4">• Insert key at correct position</p>
+          </div>
+        </div>
+
+        <div className="bg-orange-50 dark:bg-orange-900 rounded-lg p-4">
+          <h4 className="font-semibold mb-3">Complexity Analysis</h4>
+          <div className="space-y-2 text-gray-700 dark:text-gray-300 text-sm font-mono">
+            <p>Time: <span className="font-bold">O(n²)</span></p>
+            <p className="text-xs">Best: O(n), Worst: O(n²), Average: O(n²)</p>
+            <p>Space: <span className="font-bold">O(1)</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const PseudocodeSection = () => (
+    <div className="bg-white/95 dark:bg-gray-800 rounded-lg p-6 shadow-lg space-y-4">
+      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 mb-6">
+        Insertion Sort Implementation
+      </h2>
+
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border">
+        <h4 className="font-semibold mb-3 text-lg">Algorithm</h4>
+        <pre className="bg-gray-900 text-gray-100 rounded-md p-4 overflow-x-auto text-xs md:text-sm font-mono leading-relaxed">
+          <code>{`function insertionSort(arr):
+  n = arr.length
+  
+  for i from 1 to n-1:
+    key = arr[i]
+    j = i - 1
+    
+    while j >= 0 and arr[j] > key:
+      arr[j + 1] = arr[j]
+      j = j - 1
+    
+    arr[j + 1] = key
+  
+  return arr`}</code>
+        </pre>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="bg-blue-50 dark:bg-blue-900 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+          <h4 className="font-semibold mb-2 text-blue-900 dark:text-blue-300">Advantages</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <li>Simple to implement</li>
+            <li>Stable sorting</li>
+            <li>Adaptive algorithm</li>
+            <li>No extra space needed</li>
+            <li>Efficient for small data</li>
+          </ul>
+        </div>
+
+        <div className="bg-green-50 dark:bg-green-900 rounded-lg p-4 border border-green-200 dark:border-green-700">
+          <h4 className="font-semibold mb-2 text-green-900 dark:text-green-300">Disadvantages</h4>
+          <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+            <li>O(n²) time complexity</li>
+            <li>Inefficient for large data</li>
+            <li>Many shifts needed</li>
+            <li>Slower than advanced algorithms</li>
+            <li>Limited practical use</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <Card className="w-full max-w-3xl mx-auto">
-      <div className="p-6">
-        <h2 className="text-2xl font-bold text-center mb-6">Insertion Sort Visualization</h2>
-        <div className="flex flex-col space-y-4 mb-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-grow flex items-center gap-2">
-              <Button onClick={handleSort} disabled={isSorting}>
-                <Play className="mr-2 h-4 w-4" /> Sort
-              </Button>
-              <Button onClick={handleReset} disabled={!isSorting}>
-                <RotateCcw className="mr-2 h-4 w-4" /> Reset
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setShowPseudoCode(!showPseudoCode)} className="text-sm">
-                <Code className="mr-2 h-4 w-4" /> {showPseudoCode ? 'Hide Code' : 'Show Code'}
-              </Button>
-              <Button onClick={() => setShowTheory(!showTheory)} className="text-sm">
-                <BookOpen className="mr-2 h-4 w-4" /> {showTheory ? 'Hide Theory' : 'Show Theory'}
-              </Button>
-            </div>
-          </div>
-          <div className="flex flex-col space-y-2">
-            <Input
-              type="text"
-              placeholder="Enter custom array (comma-separated)"
-              value={customArrayInput}
-              onChange={(e) => handleCustomArrayInput(e.target.value)}
-              className="w-full"
-            />
-            {errorMessage && <p className="text-red-500 text-sm">{errorMessage}</p>}
-            <Button onClick={generateRandomArray} className="text-sm">
-              <RefreshCw className="mr-2 h-4 w-4" /> Generate Random Array
-            </Button>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-3">
+            Insertion Sort 
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+            Watch the algorithm build the sorted array by inserting each element into its correct position.
+          </p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 shadow-lg mb-6">
+          <div className="flex flex-wrap gap-2 justify-center">
+            {[
+              { id: '', label: '', icon: Zap },
+              { id: 'theory', label: 'Theory', icon: BookOpen },
+              { id: 'pseudocode', label: 'Algorithm', icon: Code }
+            ].map(t => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setTab(t.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+                    tab === t.id
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600 hover:border-gray-400'
+                  }`}
+                >
+                  <Icon size={18} /> {t.label}
+                </button>
+              );
+            })}
           </div>
         </div>
-        <div className="flex flex-wrap justify-center gap-2 mb-4">
-          {array.map((num, index) => (
-            <div key={index} className="flex flex-col items-center">
-              <motion.div
-                className={`w-12 h-12 flex items-center justify-center border ${
-                  currentStep >= 0 && steps[currentStep].current === index
-                    ? 'bg-blue-200 dark:bg-blue-700 border-blue-500 dark:border-blue-400'
-                    : currentStep >= 0 && steps[currentStep].comparing && steps[currentStep].comparing.includes(index)
-                    ? steps[currentStep].shifting
-                      ? 'bg-green-200 dark:bg-green-700 border-green-500 dark:border-green-400'
-                      : 'bg-yellow-200 dark:bg-yellow-700 border-yellow-500 dark:border-yellow-400'
-                    : currentStep >= 0 && steps[currentStep].inserting === index
-                    ? 'bg-purple-200 dark:bg-purple-700 border-purple-500 dark:border-purple-400'
-                    : 'border-gray-300 dark:border-gray-600'
-                }`}
-                animate={{
-                  scale: currentStep >= 0 && (steps[currentStep].comparing?.includes(index) || steps[currentStep].inserting === index || steps[currentStep].current === index) ? 1.1 : 1,
-                }}
-                transition={{ duration: ANIMATION_DURATION }}
+
+        {/* Controls */}
+        {tab === '' && (
+          <div className="bg-white/80 dark:bg-gray-800 rounded-lg p-6 shadow-lg mb-6">
+            <div className="flex flex-wrap items-center gap-4 mb-4">
+              <button
+                onClick={handleSort}
+                disabled={isRunning}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
               >
-                <span className="text-gray-900 dark:text-white">{num}</span>
-              </motion.div>
-              <div className="text-xs mt-1 text-gray-500">{index}</div>
+                <Zap size={18} /> Sort
+              </button>
+
+              <button
+                onClick={toggleAnimation}
+                disabled={steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                {isRunning ? <Pause size={18} /> : <Play size={18} />}
+                {isRunning ? 'Pause' : 'Play'}
+              </button>
+
+              <button
+                onClick={stepForward}
+                disabled={currentStep >= steps.length - 1 || steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                <StepForward size={18} /> Step
+              </button>
+
+              <button
+                onClick={resetAnimation}
+                disabled={steps.length === 0}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-lg transition-colors font-medium"
+              >
+                <RotateCcw size={18} /> Reset
+              </button>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <span className="text-sm font-medium">Speed:</span>
+                <select
+                  value={animationSpeed}
+                  onChange={(e) => setAnimationSpeed(parseInt(e.target.value))}
+                  className="px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={1000}>Slow</option>
+                  <option value={500}>Normal</option>
+                  <option value={100}>Fast</option>
+                  <option value={10}>Very Fast</option>
+                </select>
+              </div>
             </div>
-          ))}
-        </div>
-        <div className="flex justify-center space-x-4 my-4">
-          <Button onClick={handleStepBackward} disabled={currentStep <= 0 || !isSorting}>
-            <ChevronLeft className="mr-2 h-4 w-4" /> Previous Step
-          </Button>
-          <Button onClick={handleStepForward} disabled={currentStep >= steps.length - 1 || !isSorting}>
-            Next Step <ChevronRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-        {currentStep >= 0 && (
-          <div className="mt-4 p-4 bg-gray-100 dark:bg-gray-800 rounded-md">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Current Step:</h3>
-            <p className="text-gray-900 dark:text-white">{stepDescriptions[currentStep]}</p>
+
+            {steps.length > 0 && (
+              <div>
+                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <span>Step {currentStep + 1} of {steps.length}</span>
+                  <span className="font-semibold text-purple-600 dark:text-purple-400">{steps[currentStep]?.type?.toUpperCase().replace(/_/g, ' ')}</span>
+                </div>
+                <div className="w-full bg-gray-300 dark:bg-gray-600 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+
+            {/* Custom Input Section */}
+            <div className="mt-4 pt-4 border-t-2 border-gray-300 dark:border-gray-600">
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                Enter Custom Array (comma-separated):
+              </label>
+              <input
+                type="text"
+                value={customInput}
+                onChange={(e) => handleCustomInput(e.target.value)}
+                placeholder="e.g., 64, 34, 25, 12, 22"
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+              />
+              {errorMessage && (
+                <p className="text-red-600 dark:text-red-400 text-sm font-semibold mb-2">⚠️ {errorMessage}</p>
+              )}
+              <button
+                onClick={generateRandomArray}
+                className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+              >
+                Generate Random Array
+              </button>
+            </div>
           </div>
         )}
-        {isSorted && (
-          <div className="mt-4 p-4 bg-green-100 rounded-md">
-            <p className="text-green-700 font-semibold">Array is now fully sorted!</p>
+
+        {/* Main Content */}
+        {tab === '' && render()}
+        {tab === 'theory' && <div className="mt-6"><TheorySection /></div>}
+        {tab === 'pseudocode' && <div className="mt-6"><PseudocodeSection /></div>}
+
+        {/* Step Information */}
+        {tab === '' && steps[currentStep] && (
+          <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg mt-6 border-l-4 border-blue-500">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-white">Current Step</h3>
+            <p className="text-gray-700 dark:text-gray-300">{currentStepData.message}</p>
           </div>
         )}
-        {showPseudoCode && <PseudoCode />}
-        {showTheory && <Theory />}
+
+        {/* Footer */}
+        <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 text-center shadow-lg">
+          <h3 className="text-xl font-bold mb-2">Master Sorting Algorithms! 📊</h3>
+          <p>Insertion Sort is an adaptive algorithm that works efficiently on nearly sorted data and is great for learning fundamental sorting concepts.</p>
+        </div>
       </div>
-    </Card>
+    </div>
   );
 }
 
+export default InsertionSort;
