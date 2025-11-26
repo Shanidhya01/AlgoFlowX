@@ -56,8 +56,11 @@ const AlgorithmCard = ({ title, description, symbol }) => {
   // Get complexity info based on algorithm
   const getComplexityInfo = (title) => {
     const complexities = {
+      // Searching
       'Binary Search': { time: 'O(log n)', space: 'O(1)' },
       'Linear Search': { time: 'O(n)', space: 'O(1)' },
+      
+      // Sorting
       'Bubble Sort': { time: 'O(n²)', space: 'O(1)' },
       'Quick Sort': { time: 'O(n log n)', space: 'O(log n)' },
       'Merge Sort': { time: 'O(n log n)', space: 'O(n)' },
@@ -66,11 +69,34 @@ const AlgorithmCard = ({ title, description, symbol }) => {
       'Insertion Sort': { time: 'O(n²)', space: 'O(1)' },
       'Counting Sort': { time: 'O(n + k)', space: 'O(k)' },
       'Bucket Sort': { time: 'O(n + k)', space: 'O(n + k)' },
+      'Topological Sort': { time: 'O(V + E)', space: 'O(V)' },
+      
+      // Graph Algorithms
+      'Depth-First Search': { time: 'O(V + E)', space: 'O(V)' },
+      'Breadth-First Search': { time: 'O(V + E)', space: 'O(V)' },
       "Dijkstra's Algorithm": { time: 'O((V+E)log V)', space: 'O(V)' },
       'Bellman-Ford Algorithm': { time: 'O(V × E)', space: 'O(V)' },
       'Floyd-Warshall Algorithm': { time: 'O(V³)', space: 'O(V²)' },
       "Kruskal's Algorithm": { time: 'O(E log E)', space: 'O(V)' },
       "Prim's Algorithm": { time: 'O((V+E)log V)', space: 'O(V)' },
+      'Disjoint Set Union (Union-Find)': { time: 'O(α(n))', space: 'O(n)' },
+      
+      // Backtracking & Recursion
+      'N-Queens Problem': { time: 'O(n!)', space: 'O(n)' },
+      'Backtracking Algorithm': { time: 'O(2ⁿ)', space: 'O(n)' },
+      'Sudoku Solver': { time: 'O(9^(n²))', space: 'O(n²)' },
+      'Recursion': { time: 'O(2ⁿ)', space: 'O(n)' },
+      
+      // Dynamic Programming
+      'Dynamic Programming': { time: 'O(n²)', space: 'O(n)' },
+      'Knapsack Problem': { time: 'O(n × W)', space: 'O(n × W)' },
+      
+      // String Algorithms
+      'KMP Pattern Matcher': { time: 'O(n + m)', space: 'O(m)' },
+      
+      // Greedy Algorithms
+      'Greedy Algorithm': { time: 'O(n log n)', space: 'O(1)' },
+      'Huffman Coding Tree': { time: 'O(n log n)', space: 'O(n)' },
     };
     return complexities[title] || { time: 'N/A', space: 'N/A' };
   };

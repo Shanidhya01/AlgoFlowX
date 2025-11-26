@@ -207,7 +207,7 @@ const algorithms = [
 function AlgorithmGrid({ searchTerm = '' }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('difficulty');
 
   // Get unique categories
   const categories = ['All', ...new Set(algorithms.map(algo => algo.category))];
@@ -227,12 +227,13 @@ function AlgorithmGrid({ searchTerm = '' }) {
     });
 
     // Sort
-    if (sortBy === 'name') {
-      filtered.sort((a, b) => a.title.localeCompare(b.title));
-    } else if (sortBy === 'difficulty') {
+    if (sortBy === 'difficulty') {
       const diffOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
       filtered.sort((a, b) => diffOrder[a.difficulty] - diffOrder[b.difficulty]);
     }
+    else if (sortBy === 'name') {
+      filtered.sort((a, b) => a.title.localeCompare(b.title));
+    } 
 
     return filtered;
   }, [searchTerm, selectedCategory, selectedDifficulty, sortBy]);
@@ -314,8 +315,8 @@ function AlgorithmGrid({ searchTerm = '' }) {
                 onChange={(e) => setSortBy(e.target.value)}
                 className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-medium transition-colors duration-300 bg-white"
               >
-                <option value="name">Name (A-Z)</option>
                 <option value="difficulty">Difficulty</option>
+                <option value="name">Name (A-Z)</option>
               </select>
             </div>
           </div>
@@ -362,14 +363,6 @@ function AlgorithmGrid({ searchTerm = '' }) {
             </div>
           </>
         )}
-      </div>
-
-      {/* Footer */}
-      <div className="mt-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-8">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h3 className="text-xl font-bold mb-2">Master Algorithms with Interactive Learning</h3>
-          <p className="text-blue-100">Visualize, understand, and practice algorithms in an engaging way</p>
-        </div>
       </div>
 
       <style>{`

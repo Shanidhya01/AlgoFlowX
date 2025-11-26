@@ -166,6 +166,16 @@ function BinarySearch() {
     resetAnimation();
   };
 
+  const generateNewSortedArray = () => {
+    const newArray = Array.from({ length: 10 }, () => Math.floor(Math.random() * 100))
+      .sort((a, b) => a - b);
+    setArray(newArray);
+    setCustomArrayInput(newArray.join(', '));
+    setErrorMessage('');
+    resetAnimation();
+    setTarget('');
+  };
+
   useEffect(() => {
     if (isRunning && currentStep < steps.length - 1) {
       const timer = setTimeout(() => {
@@ -559,12 +569,21 @@ function BinarySearch() {
                 {errorMessage && <p className="text-red-500 text-sm mt-1">{errorMessage}</p>}
               </div>
 
-              <button
-                onClick={generateDefaultArray}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
-              >
-                Reset to Default Array
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={generateDefaultArray}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                >
+                  Reset to Default Array
+                </button>
+
+                <button
+                  onClick={generateNewSortedArray}
+                  className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-medium"
+                >
+                  Generate New Array
+                </button>
+              </div>
             </div>
 
             {steps.length > 0 && (

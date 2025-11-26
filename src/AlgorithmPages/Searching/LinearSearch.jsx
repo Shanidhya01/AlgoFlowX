@@ -9,11 +9,13 @@ function LinearSearch() {
   const [animationSpeed, setAnimationSpeed] = useState(800);
   
   const [array, setArray] = useState([45, 23, 67, 12, 89, 34, 56, 78, 90, 11]);
+  const [customArrayInput, setCustomArrayInput] = useState('45,23,67,12,89,34,56,78,90,11');
   const [target, setTarget] = useState('');
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [visitedIndices, setVisitedIndices] = useState([]);
   const [found, setFound] = useState(false);
   const [result, setResult] = useState('');
+  const [arrayError, setArrayError] = useState('');
 
   const linearSearchAlgorithm = useCallback(() => {
     const searchSteps = [];
@@ -63,6 +65,41 @@ function LinearSearch() {
     return searchSteps;
   }, [array, target]);
 
+  const handleCustomArrayChange = (e) => {
+    const input = e.target.value;
+    setCustomArrayInput(input);
+    setArrayError('');
+  };
+
+  const applyCustomArray = () => {
+    try {
+      const numbers = customArrayInput
+        .split(',')
+        .map(str => {
+          const num = parseInt(str.trim());
+          if (isNaN(num)) throw new Error('Invalid input');
+          return num;
+        });
+      
+      if (numbers.length === 0) {
+        setArrayError('Array cannot be empty');
+        return;
+      }
+      
+      if (numbers.length > 20) {
+        setArrayError('Maximum 20 elements allowed');
+        return;
+      }
+      
+      setArray(numbers);
+      setArrayError('');
+      resetAnimation();
+      setTarget('');
+    } catch (error) {
+      setArrayError('Please enter valid numbers separated by commas (e.g., 1,2,3,4,5)');
+    }
+  };
+
   const runAlgorithm = () => {
     if (!target) return;
     const algorithmSteps = linearSearchAlgorithm();
@@ -92,6 +129,7 @@ function LinearSearch() {
   const generateNewArray = () => {
     const newArray = Array.from({ length: 10 }, () => Math.floor(Math.random() * 100));
     setArray(newArray);
+    setCustomArrayInput(newArray.join(','));
     resetAnimation();
     setTarget('');
   };
@@ -390,6 +428,33 @@ function LinearSearch() {
             })}
           </div>
         </div>
+
+        {/* Custom Array Input */}
+        {tab === 'visualizer' && (
+          <div className="bg-white/80 rounded-lg p-6 shadow-lg mb-6">
+            <h3 className="text-lg font-semibold mb-4">Custom Array Input</h3>
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">Enter comma-separated numbers to create your custom array (max 20 elements)</p>
+              <div className="flex gap-2 flex-wrap">
+                <input
+                  type="text"
+                  value={customArrayInput}
+                  onChange={handleCustomArrayChange}
+                  placeholder="e.g., 45,23,67,12,89,34,56,78,90,11"
+                  className="flex-1 min-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={applyCustomArray}
+                  className="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors font-medium"
+                >
+                  Apply Array
+                </button>
+              </div>
+              {arrayError && <p className="text-sm text-red-600">{arrayError}</p>}
+              <p className="text-xs text-gray-500">Current array: {array.join(', ')}</p>
+            </div>
+          </div>
+        )}
 
         {/* Controls */}
         {tab === 'visualizer' && (

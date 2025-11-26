@@ -599,12 +599,6 @@ function fib(n) {
             <p className="text-gray-700 dark:text-gray-300">{message}</p>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 text-center shadow-lg">
-          <h3 className="text-xl font-bold mb-2">Master Dynamic Programming! 💡</h3>
-          <p>DP transforms exponential complexity into polynomial - the power of smart optimization.</p>
-        </div>
       </div>
     </div>
   );

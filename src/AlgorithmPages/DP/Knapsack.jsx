@@ -687,13 +687,7 @@ return selected`}</code>
           </div>
         )}
 
-        {/* Footer */}
-        <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 text-center shadow-lg">
-          <h3 className="text-xl font-bold mb-2">Master Dynamic Programming! 🎯</h3>
-          <p className="text-blue-100">
-            The knapsack problem demonstrates how DP breaks down complex optimization into manageable subproblems.
-          </p>
-        </div>
+
       </div>
     </div>
   );
