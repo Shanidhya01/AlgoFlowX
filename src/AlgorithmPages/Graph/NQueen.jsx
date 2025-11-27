@@ -16,6 +16,34 @@ function NQueens() {
   const [placedQueens, setPlacedQueens] = useState([]);
   const [validPlacement, setValidPlacement] = useState(true);
   const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Preset examples
+  const examples = [
+    { name: '4-Queens (Classic)', n: 4, description: '2 solutions' },
+    { name: '5-Queens', n: 5, description: '10 solutions' },
+    { name: '6-Queens', n: 6, description: '4 solutions' },
+    { name: '8-Queens (Famous)', n: 8, description: '92 solutions' }
+  ];
+
+  const loadExample = (exampleN) => {
+    if (isRunning || steps.length > 0) {
+      setErrorMessage('Please reset before changing board size.');
+      return;
+    }
+    setN(exampleN);
+    setErrorMessage('');
+  };
+
+  const generateRandomSize = () => {
+    if (isRunning || steps.length > 0) {
+      setErrorMessage('Please reset before changing board size.');
+      return;
+    }
+    const randomN = 4 + Math.floor(Math.random() * 5); // 4-8
+    setN(randomN);
+    setErrorMessage('');
+  };
 
   // Initialize board
   useEffect(() => {
@@ -609,20 +637,75 @@ IS-SAFE(board, row, col):
         {/* Controls */}
         {tab === 'visualizer' && (
           <div className="bg-white/80 rounded-lg p-6 shadow-lg mb-6">
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <label className="text-sm font-medium text-gray-700">Board Size (N):</label>
-                <select
-                  value={n}
-                  onChange={(e) => setN(parseInt(e.target.value))}
-                  disabled={isRunning || steps.length > 0}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {[4, 5, 6, 7, 8].map(num => (
-                    <option key={num} value={num}>{num}-Queens</option>
-                  ))}
-                </select>
+            {/* Board Size Selection */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+              <h4 className="font-semibold mb-3">Board Configuration</h4>
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className="text-sm font-medium text-gray-700">Board Size (N):</label>
+                  <select
+                    value={n}
+                    onChange={(e) => {
+                      if (isRunning || steps.length > 0) {
+                        setErrorMessage('Please reset before changing board size.');
+                      } else {
+                        setN(parseInt(e.target.value));
+                        setErrorMessage('');
+                      }
+                    }}
+                    disabled={isRunning || steps.length > 0}
+                    className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    {[4, 5, 6, 7, 8, 9, 10].map(num => (
+                      <option key={num} value={num}>{num}-Queens</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={generateRandomSize}
+                    disabled={isRunning || steps.length > 0}
+                    className="px-3 py-2 text-sm bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 font-medium"
+                  >
+                    🎲 Random Size
+                  </button>
+                </div>
+
+                {errorMessage && (
+                  <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                    <p className="text-red-700 text-sm">⚠️ {errorMessage}</p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 mb-2">Quick Examples:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {examples.map(example => (
+                      <button
+                        key={example.n}
+                        onClick={() => loadExample(example.n)}
+                        disabled={isRunning || steps.length > 0}
+                        className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50 font-medium"
+                        title={example.description}
+                      >
+                        {example.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="font-semibold text-blue-800 text-sm mb-1">💡 Tips:</p>
+                  <ul className="text-blue-700 text-xs space-y-1 ml-4">
+                    <li>• Start with 4-Queens to understand the algorithm</li>
+                    <li>• 8-Queens is the classic problem with 92 solutions</li>
+                    <li>• Larger boards (9-10) take longer to solve</li>
+                    <li>• Watch how backtracking prunes invalid branches</li>
+                  </ul>
+                </div>
               </div>
+            </div>
+
+            {/* Animation Controls */}
+            <div className="flex flex-wrap items-center gap-4 mb-4">
 
               <button
                 onClick={runAlgorithm}
@@ -664,12 +747,29 @@ IS-SAFE(board, row, col):
                   onChange={(e) => setAnimationSpeed(parseInt(e.target.value))}
                   className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  {[100, 200, 300, 400, 500].map(speed => (
-                    <option key={speed} value={speed}>{speed}ms</option>
-                  ))}
+                  <option value={1200}>Slow</option>
+                  <option value={800}>Normal</option>
+                  <option value={400}>Fast</option>
+                  <option value={100}>Very Fast</option>
                 </select>
               </div>
             </div>
+
+            {/* Progress Bar */}
+            {steps.length > 0 && (
+              <div className="mt-4">
+                <div className="flex justify-between text-sm text-gray-600 mb-2">
+                  <span>Step {currentStep + 1} of {steps.length}</span>
+                  <span className="font-semibold text-purple-600">{steps[currentStep]?.type?.toUpperCase().replace(/_/g, ' ')}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -677,6 +777,14 @@ IS-SAFE(board, row, col):
         {tab === 'visualizer' && renderVisualizer()}
         {tab === 'theory' && <div className="mt-6"><TheorySection /></div>}
         {tab === 'pseudocode' && <div className="mt-6"><PseudocodeSection /></div>}
+
+        {/* Step Information */}
+        {tab === 'visualizer' && steps[currentStep] && (
+          <div className="bg-white/90 rounded-lg p-6 shadow-lg mt-6 border-l-4 border-blue-500">
+            <h3 className="text-lg font-semibold mb-2 text-gray-900">Current Step</h3>
+            <p className="text-gray-700">{message}</p>
+          </div>
+        )}
       </div>    
     </div>
   );

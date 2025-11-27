@@ -8,25 +8,29 @@ function DFS() {
   const [steps, setSteps] = useState([]);
   const [animationSpeed, setAnimationSpeed] = useState(1000);
 
-  // Graph nodes
-  const [nodes] = useState([
+  // Default graph setup
+  const defaultNodes = [
     { id: 0, label: 'A', x: 100, y: 100 },
     { id: 1, label: 'B', x: 300, y: 50 },
     { id: 2, label: 'C', x: 500, y: 100 },
     { id: 3, label: 'D', x: 200, y: 250 },
     { id: 4, label: 'E', x: 400, y: 280 },
     { id: 5, label: 'F', x: 100, y: 350 }
-  ]);
+  ];
 
-  // Adjacency list representation
-  const [adjacencyList] = useState({
+  const defaultAdjacencyList = {
     0: [1, 3],      // A -> B, D
     1: [0, 2, 3],   // B -> A, C, D
     2: [1, 4],      // C -> B, E
     3: [0, 1, 5],   // D -> A, B, F
     4: [2, 5],      // E -> C, F
     5: [3, 4]       // F -> D, E
-  });
+  };
+
+  // Graph nodes
+  const [nodes, setNodes] = useState(defaultNodes);
+  const [adjacencyList, setAdjacencyList] = useState(defaultAdjacencyList);
+  const [startNode, setStartNode] = useState(0);
 
   const [visitedNodes, setVisitedNodes] = useState([]);
   const [currentNode, setCurrentNode] = useState(null);
@@ -34,6 +38,145 @@ function DFS() {
   const [stack, setStack] = useState([]);
   const [discoveredEdges, setDiscoveredEdges] = useState([]);
   const [backEdges, setBackEdges] = useState([]);
+
+  // Custom input states
+  const [nodesInput, setNodesInput] = useState('A, B, C, D, E, F');
+  const [edgesInput, setEdgesInput] = useState('A-B, A-D, B-C, B-D, C-E, D-F, E-F');
+  const [startNodeInput, setStartNodeInput] = useState('A');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const parseCustomGraph = useCallback(() => {
+    try {
+      // Parse nodes
+      const nodeLabels = nodesInput
+        .split(',')
+        .map(n => n.trim())
+        .filter(n => n.length > 0);
+
+      if (nodeLabels.length === 0) {
+        throw new Error('Please enter at least one node');
+      }
+
+      if (nodeLabels.length > 12) {
+        throw new Error('Maximum 12 nodes allowed');
+      }
+
+      // Check for duplicate nodes
+      const uniqueNodes = new Set(nodeLabels);
+      if (uniqueNodes.size !== nodeLabels.length) {
+        throw new Error('Duplicate nodes found');
+      }
+
+      // Create node objects with positions
+      const cols = Math.ceil(Math.sqrt(nodeLabels.length));
+      const newNodes = nodeLabels.map((label, idx) => {
+        const row = Math.floor(idx / cols);
+        const col = idx % cols;
+        return {
+          id: idx,
+          label: label,
+          x: 100 + col * 180,
+          y: 100 + row * 150
+        };
+      });
+
+      // Parse edges
+      const newAdjacencyList = {};
+      nodeLabels.forEach((_, idx) => {
+        newAdjacencyList[idx] = [];
+      });
+
+      if (edgesInput.trim().length > 0) {
+        const edgePairs = edgesInput.split(',').map(e => e.trim());
+        for (const pair of edgePairs) {
+          const match = pair.match(/^([A-Za-z0-9]+)\s*-\s*([A-Za-z0-9]+)$/);
+          if (!match) {
+            throw new Error(`Invalid edge format: "${pair}". Use format: A-B`);
+          }
+          const [, from, to] = match;
+          const fromIdx = nodeLabels.indexOf(from);
+          const toIdx = nodeLabels.indexOf(to);
+
+          if (fromIdx === -1) {
+            throw new Error(`Node "${from}" not found in nodes list`);
+          }
+          if (toIdx === -1) {
+            throw new Error(`Node "${to}" not found in nodes list`);
+          }
+
+          // Add bidirectional edges (undirected graph)
+          if (!newAdjacencyList[fromIdx].includes(toIdx)) {
+            newAdjacencyList[fromIdx].push(toIdx);
+          }
+          if (!newAdjacencyList[toIdx].includes(fromIdx)) {
+            newAdjacencyList[toIdx].push(fromIdx);
+          }
+        }
+      }
+
+      // Parse start node
+      const startIdx = nodeLabels.indexOf(startNodeInput.trim());
+      if (startIdx === -1) {
+        throw new Error(`Start node "${startNodeInput}" not found in nodes list`);
+      }
+
+      setNodes(newNodes);
+      setAdjacencyList(newAdjacencyList);
+      setStartNode(startIdx);
+      setErrorMessage('');
+      setSteps([]);
+      setCurrentStep(0);
+      setIsRunning(false);
+    } catch (error) {
+      setErrorMessage(error.message);
+    }
+  }, [nodesInput, edgesInput, startNodeInput]);
+
+  const generateRandomGraph = () => {
+    const nodeCount = Math.floor(Math.random() * 4) + 4; // 4-7 nodes
+    const nodeLabels = Array.from({ length: nodeCount }, (_, i) => 
+      String.fromCharCode(65 + i)
+    );
+
+    // Generate random edges
+    const edges = [];
+    const edgeSet = new Set();
+    
+    // Ensure connected graph - create a path
+    for (let i = 0; i < nodeCount - 1; i++) {
+      edges.push(`${nodeLabels[i]}-${nodeLabels[i + 1]}`);
+      edgeSet.add(`${i}-${i+1}`);
+    }
+
+    // Add random additional edges
+    const extraEdges = Math.floor(Math.random() * 3) + 2;
+    for (let i = 0; i < extraEdges; i++) {
+      const from = Math.floor(Math.random() * nodeCount);
+      const to = Math.floor(Math.random() * nodeCount);
+      if (from !== to && !edgeSet.has(`${from}-${to}`) && !edgeSet.has(`${to}-${from}`)) {
+        edges.push(`${nodeLabels[from]}-${nodeLabels[to]}`);
+        edgeSet.add(`${from}-${to}`);
+      }
+    }
+
+    setNodesInput(nodeLabels.join(', '));
+    setEdgesInput(edges.join(', '));
+    setStartNodeInput(nodeLabels[0]);
+    setErrorMessage('');
+  };
+
+  const resetToDefault = () => {
+    setNodes(defaultNodes);
+    setAdjacencyList(defaultAdjacencyList);
+    setStartNode(0);
+    setNodesInput('A, B, C, D, E, F');
+    setEdgesInput('A-B, A-D, B-C, B-D, C-E, D-F, E-F');
+    setStartNodeInput('A');
+    setErrorMessage('');
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+  };
 
   const dfsAlgorithm = useCallback(() => {
     const steps = [];
@@ -43,11 +186,11 @@ function DFS() {
     const discoveredEdges = [];
     const backEdges = [];
 
-    const startNode = 0;
+    const startNodeLabel = nodes.find(n => n.id === startNode)?.label || 'A';
 
     steps.push({
       type: 'initialize',
-      message: 'Initializing DFS from node A. Pushing A to stack.',
+      message: `Initializing DFS from node ${startNodeLabel}. Pushing ${startNodeLabel} to stack.`,
       visitedNodes: Array.from(visited),
       currentNode: null,
       traversalOrder: [],
@@ -643,6 +786,87 @@ MAIN:
                   className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
                 ></div>
+              </div>
+            </div>
+
+            {/* Custom Graph Input */}
+            <div className="pt-4 border-t-2 border-gray-300 mt-4">
+              <h4 className="font-semibold text-lg mb-3">Custom Graph Input</h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nodes (comma-separated, max 12):
+                  </label>
+                  <input
+                    type="text"
+                    value={nodesInput}
+                    onChange={(e) => setNodesInput(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="e.g., A, B, C, D"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Edges (format: A-B, comma-separated):
+                  </label>
+                  <input
+                    type="text"
+                    value={edgesInput}
+                    onChange={(e) => setEdgesInput(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="e.g., A-B, B-C, C-D"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Node:
+                  </label>
+                  <input
+                    type="text"
+                    value={startNodeInput}
+                    onChange={(e) => setStartNodeInput(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="e.g., A"
+                  />
+                </div>
+
+                {errorMessage && (
+                  <p className="text-red-600 text-sm">⚠️ {errorMessage}</p>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={parseCustomGraph}
+                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium text-sm"
+                  >
+                    Apply Custom Graph
+                  </button>
+                  <button
+                    onClick={generateRandomGraph}
+                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium text-sm"
+                  >
+                    Generate Random
+                  </button>
+                  <button
+                    onClick={resetToDefault}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium text-sm"
+                  >
+                    Reset to Default
+                  </button>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded-lg text-sm">
+                  <p className="font-semibold text-blue-800 mb-1">💡 Tips:</p>
+                  <ul className="text-blue-700 space-y-1 ml-4">
+                    <li>• Nodes: Single letters or numbers, comma-separated (e.g., A, B, C)</li>
+                    <li>• Edges: Undirected format A-B creates bidirectional connection</li>
+                    <li>• Max 12 nodes for optimal visualization</li>
+                    <li>• Start node must be one of the defined nodes</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>

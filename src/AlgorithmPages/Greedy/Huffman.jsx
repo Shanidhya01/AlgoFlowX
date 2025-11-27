@@ -10,6 +10,78 @@ function Huffman() {
   const [inputText, setInputText] = useState('HUFFMAN CODING ALGORITHM');
   const [userInput, setUserInput] = useState('');
   const [showInput, setShowInput] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Preset examples
+  const examples = [
+    { name: 'Default', text: 'HUFFMAN CODING ALGORITHM' },
+    { name: 'Simple', text: 'AAABBC' },
+    { name: 'DNA', text: 'AAAGGGCCCTTTAAACCCGGGTTT' },
+    { name: 'Binary', text: '11100010101110001010111' },
+    { name: 'Text', text: 'HELLO WORLD COMPRESSION' },
+    { name: 'Repeated', text: 'AAAABBBBCCCCDDDD' }
+  ];
+
+  const loadExample = (exampleName) => {
+    const example = examples.find(ex => ex.name === exampleName);
+    if (example) {
+      setUserInput(example.text);
+      setErrorMessage('');
+    }
+  };
+
+  const generateRandomText = () => {
+    const chars = 'ABCDEFGH';
+    const length = 15 + Math.floor(Math.random() * 15); // 15-30 chars
+    let randomText = '';
+    
+    // Create text with varied frequencies for better compression
+    const weights = [5, 4, 3, 3, 2, 2, 1, 1]; // Different frequencies for characters
+    
+    for (let i = 0; i < length; i++) {
+      const weightedIndex = Math.floor(Math.random() * weights.reduce((a, b) => a + b, 0));
+      let sum = 0;
+      let charIndex = 0;
+      
+      for (let j = 0; j < weights.length; j++) {
+        sum += weights[j];
+        if (weightedIndex < sum) {
+          charIndex = j;
+          break;
+        }
+      }
+      
+      randomText += chars[charIndex];
+    }
+    
+    setUserInput(randomText);
+    setErrorMessage('');
+  };
+
+  const validateInput = (text) => {
+    if (!text.trim()) {
+      setErrorMessage('Please enter text to compress.');
+      return false;
+    }
+    if (text.length < 2) {
+      setErrorMessage('Text must be at least 2 characters long.');
+      return false;
+    }
+    if (text.length > 200) {
+      setErrorMessage('Text is too long. Maximum 200 characters for optimal visualization.');
+      return false;
+    }
+    
+    // Check if there's at least 2 unique characters
+    const uniqueChars = new Set(text);
+    if (uniqueChars.size < 2) {
+      setErrorMessage('Text must contain at least 2 different characters for compression.');
+      return false;
+    }
+    
+    setErrorMessage('');
+    return true;
+  };
 
   const buildHuffmanTree = useCallback((text) => {
     const operationSteps = [];
@@ -151,7 +223,10 @@ function Huffman() {
   }, []);
 
   const handleSolve = () => {
-    const text = userInput.toUpperCase() || inputText;
+    const text = (userInput.toUpperCase() || inputText).trim();
+    if (!validateInput(text)) {
+      return;
+    }
     const operationSteps = buildHuffmanTree(text);
     setSteps(operationSteps);
     setCurrentStep(0);
@@ -188,8 +263,148 @@ function Huffman() {
 
   const currentStepData = steps[currentStep] || {};
 
+  // Tree visualization helper
+  const renderTree = (node, x = 400, y = 50, level = 0, xOffset = 200) => {
+    if (!node) return null;
+
+    const nodeRadius = 30;
+    const verticalSpacing = 80;
+    const newXOffset = xOffset / 2;
+
+    const elements = [];
+
+    // Draw edges to children
+    if (node.left) {
+      const leftX = x - xOffset;
+      const leftY = y + verticalSpacing;
+      elements.push(
+        <line
+          key={`line-left-${x}-${y}`}
+          x1={x}
+          y1={y + nodeRadius}
+          x2={leftX}
+          y2={leftY - nodeRadius}
+          stroke="#3b82f6"
+          strokeWidth="2"
+        />
+      );
+      elements.push(
+        <text
+          key={`label-left-${x}-${y}`}
+          x={(x + leftX) / 2 - 10}
+          y={(y + leftY) / 2}
+          fill="#3b82f6"
+          fontSize="14"
+          fontWeight="bold"
+        >
+          0
+        </text>
+      );
+      elements.push(...renderTree(node.left, leftX, leftY, level + 1, newXOffset));
+    }
+
+    if (node.right) {
+      const rightX = x + xOffset;
+      const rightY = y + verticalSpacing;
+      elements.push(
+        <line
+          key={`line-right-${x}-${y}`}
+          x1={x}
+          y1={y + nodeRadius}
+          x2={rightX}
+          y2={rightY - nodeRadius}
+          stroke="#ef4444"
+          strokeWidth="2"
+        />
+      );
+      elements.push(
+        <text
+          key={`label-right-${x}-${y}`}
+          x={(x + rightX) / 2 + 5}
+          y={(y + rightY) / 2}
+          fill="#ef4444"
+          fontSize="14"
+          fontWeight="bold"
+        >
+          1
+        </text>
+      );
+      elements.push(...renderTree(node.right, rightX, rightY, level + 1, newXOffset));
+    }
+
+    // Draw node
+    const isLeaf = node.char !== null;
+    elements.push(
+      <g key={`node-${x}-${y}`}>
+        <circle
+          cx={x}
+          cy={y}
+          r={nodeRadius}
+          fill={isLeaf ? '#10b981' : '#8b5cf6'}
+          stroke={isLeaf ? '#059669' : '#7c3aed'}
+          strokeWidth="3"
+        />
+        <text
+          x={x}
+          y={y - 5}
+          textAnchor="middle"
+          fill="white"
+          fontSize="16"
+          fontWeight="bold"
+        >
+          {isLeaf ? node.char : '•'}
+        </text>
+        <text
+          x={x}
+          y={y + 12}
+          textAnchor="middle"
+          fill="white"
+          fontSize="12"
+          fontWeight="bold"
+        >
+          {node.freq}
+        </text>
+      </g>
+    );
+
+    return elements;
+  };
+
   const render = () => (
     <div className="space-y-6">
+      {/* Huffman Tree Visualization */}
+      {currentStepData.tree && (
+        <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg">
+          <h3 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+            <Zap className="text-purple-600" size={28} />
+            Huffman Tree Structure
+          </h3>
+          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border-2 border-gray-300 dark:border-gray-600 overflow-x-auto">
+            <svg width="100%" height="400" viewBox="0 0 800 400" className="mx-auto">
+              {renderTree(currentStepData.tree)}
+            </svg>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-green-500 border-2 border-green-600"></div>
+              <span className="text-gray-700 dark:text-gray-300">Leaf Node (Character)</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-purple-500 border-2 border-purple-700"></div>
+              <span className="text-gray-700 dark:text-gray-300">Internal Node</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-blue-600 font-bold text-lg">0</span>
+              <span className="text-gray-700 dark:text-gray-300">Left Edge</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-red-500 font-bold text-lg">1</span>
+              <span className="text-gray-700 dark:text-gray-300">Right Edge</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg">
         <h3 className="text-2xl font-semibold mb-6 flex items-center gap-2">
           <Zap className="text-blue-600" size={28} />
@@ -425,7 +640,7 @@ GENERATE-CODES(node, code, codes):
         <div className="bg-white/80 dark:bg-gray-800/80 rounded-lg p-3 shadow-lg mb-6">
           <div className="flex flex-wrap gap-2 justify-center">
             {[
-              { id: '', label: '', icon: Zap },
+              { id: '', label: 'Visualizer', icon: Zap },
               { id: 'theory', label: 'Theory', icon: BookOpen },
               { id: 'pseudocode', label: 'Algorithm', icon: Code }
             ].map(t => {
@@ -451,22 +666,68 @@ GENERATE-CODES(node, code, codes):
         {tab === '' && showInput && (
           <div className="bg-white/80 dark:bg-gray-800 rounded-lg p-6 shadow-lg mb-6">
             <h3 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white">Enter Text to Compress</h3>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <input
-                type="text"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                placeholder={inputText}
-                className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={handleSolve}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-              >
-                Encode
-              </button>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <input
+                  type="text"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value.toUpperCase())}
+                  placeholder={inputText}
+                  className="flex-1 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  maxLength={200}
+                />
+                <button
+                  onClick={handleSolve}
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Encode
+                </button>
+              </div>
+
+              {errorMessage && (
+                <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-3 rounded">
+                  <p className="text-red-700 dark:text-red-300 text-sm">
+                    ⚠️ {errorMessage}
+                  </p>
+                </div>
+              )}
+
+              {/* Preset Examples */}
+              <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-4">
+                <h4 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Quick Examples:</h4>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {examples.map((example) => (
+                    <button
+                      key={example.name}
+                      onClick={() => loadExample(example.name)}
+                      className="px-3 py-1.5 text-sm bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors font-medium"
+                    >
+                      {example.name}
+                    </button>
+                  ))}
+                </div>
+                
+                <button
+                  onClick={generateRandomText}
+                  className="px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium"
+                >
+                  🎲 Generate Random
+                </button>
+              </div>
+
+              {/* Tips */}
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                <p className="font-semibold text-blue-800 dark:text-blue-300 text-sm mb-1">💡 Tips:</p>
+                <ul className="text-blue-700 dark:text-blue-400 text-xs space-y-1 ml-4">
+                  <li>• Input is automatically converted to uppercase</li>
+                  <li>• Better compression with repeated characters</li>
+                  <li>• Need at least 2 unique characters to compress</li>
+                  <li>• Watch how frequent characters get shorter codes</li>
+                  <li>• Maximum 200 characters for optimal visualization</li>
+                </ul>
+              </div>
             </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Or click "Encode" to use default example: "{inputText}"</p>
           </div>
         )}
 
@@ -550,12 +811,6 @@ GENERATE-CODES(node, code, codes):
             <p className="text-gray-700 dark:text-gray-300">{currentStepData.message}</p>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 text-center shadow-lg">
-          <h3 className="text-xl font-bold mb-2">Master Data Compression! 📊</h3>
-          <p>Huffman coding demonstrates how greedy algorithms achieve optimal solutions and is fundamental to modern data compression and file formats.</p>
-        </div>
       </div>
     </div>
   );

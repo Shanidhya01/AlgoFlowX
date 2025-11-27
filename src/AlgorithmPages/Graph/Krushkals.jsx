@@ -8,15 +8,15 @@ function Kruskals() {
   const [steps, setSteps] = useState([]);
   const [animationSpeed, setAnimationSpeed] = useState(1000);
 
-  const [nodes] = useState([
+  const DEFAULT_NODES = [
     { id: 0, label: 'A', x: 80, y: 100 },
     { id: 1, label: 'B', x: 250, y: 60 },
     { id: 2, label: 'C', x: 420, y: 100 },
     { id: 3, label: 'D', x: 150, y: 250 },
     { id: 4, label: 'E', x: 350, y: 280 }
-  ]);
+  ];
 
-  const [edges] = useState([
+  const DEFAULT_EDGES = [
     { id: 0, from: 0, to: 1, weight: 4 },
     { id: 1, from: 0, to: 3, weight: 2 },
     { id: 2, from: 1, to: 2, weight: 5 },
@@ -24,13 +24,175 @@ function Kruskals() {
     { id: 4, from: 2, to: 4, weight: 2 },
     { id: 5, from: 3, to: 4, weight: 8 },
     { id: 6, from: 3, to: 2, weight: 6 }
-  ]);
+  ];
+
+  const [nodes, setNodes] = useState(DEFAULT_NODES);
+  const [edges, setEdges] = useState(DEFAULT_EDGES);
+  const [nodesInput, setNodesInput] = useState('A, B, C, D, E');
+  const [edgesInput, setEdgesInput] = useState('A-B:4, A-D:2, B-C:5, B-D:1, C-E:2, D-E:8, D-C:6');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [mstEdges, setMSTEdges] = useState([]);
   const [currentEdge, setCurrentEdge] = useState(null);
   const [visitedNodes, setVisitedNodes] = useState([]);
   const [edgesInMST, setEdgesInMST] = useState(new Set());
   const [rejectedEdges, setRejectedEdges] = useState(new Set());
+
+  // Preset examples
+  const examples = [
+    { name: 'Default', nodes: 'A, B, C, D, E', edges: 'A-B:4, A-D:2, B-C:5, B-D:1, C-E:2, D-E:8, D-C:6' },
+    { name: 'Simple', nodes: 'A, B, C, D', edges: 'A-B:1, A-C:4, B-C:2, B-D:5, C-D:1' },
+    { name: 'Complex', nodes: 'A, B, C, D, E, F', edges: 'A-B:2, A-C:4, B-C:1, B-D:7, C-E:3, D-E:2, D-F:1, E-F:5' }
+  ];
+
+  const loadExample = (exampleName) => {
+    const example = examples.find(ex => ex.name === exampleName);
+    if (example) {
+      setNodesInput(example.nodes);
+      setEdgesInput(example.edges);
+      parseCustomGraph(example.nodes, example.edges);
+    }
+  };
+
+  const parseCustomGraph = (nodesStr, edgesStr) => {
+    try {
+      setErrorMessage('');
+      
+      // Parse nodes
+      const nodeLabels = nodesStr.split(',').map(n => n.trim()).filter(n => n.length > 0);
+      if (nodeLabels.length === 0) {
+        setErrorMessage('Please enter at least one node.');
+        return false;
+      }
+      if (nodeLabels.length > 12) {
+        setErrorMessage('Maximum 12 nodes allowed for optimal visualization.');
+        return false;
+      }
+
+      // Check for duplicate nodes
+      const uniqueNodes = new Set(nodeLabels);
+      if (uniqueNodes.size !== nodeLabels.length) {
+        setErrorMessage('Duplicate node labels found.');
+        return false;
+      }
+
+      // Create node objects with grid positioning
+      const cols = Math.ceil(Math.sqrt(nodeLabels.length));
+      const spacingX = 150;
+      const spacingY = 120;
+      const offsetX = 80;
+      const offsetY = 80;
+      
+      const newNodes = nodeLabels.map((label, index) => {
+        const row = Math.floor(index / cols);
+        const col = index % cols;
+        return {
+          id: index,
+          label: label,
+          x: offsetX + col * spacingX,
+          y: offsetY + row * spacingY
+        };
+      });
+
+      // Parse edges
+      const newEdges = [];
+      if (edgesStr.trim().length > 0) {
+        const edgePairs = edgesStr.split(',').map(e => e.trim()).filter(e => e.length > 0);
+        
+        for (let i = 0; i < edgePairs.length; i++) {
+          const parts = edgePairs[i].split(':');
+          if (parts.length !== 2) {
+            setErrorMessage(`Invalid edge format: "${edgePairs[i]}". Use format: A-B:weight`);
+            return false;
+          }
+          
+          const [connection, weightStr] = parts;
+          const weight = parseInt(weightStr);
+          
+          if (isNaN(weight) || weight <= 0) {
+            setErrorMessage(`Invalid weight in edge "${edgePairs[i]}". Weight must be a positive number.`);
+            return false;
+          }
+
+          const nodeParts = connection.split('-').map(p => p.trim());
+          if (nodeParts.length !== 2) {
+            setErrorMessage(`Invalid edge format: "${edgePairs[i]}". Use format: A-B:weight`);
+            return false;
+          }
+
+          const [from, to] = nodeParts;
+          const fromIdx = nodeLabels.indexOf(from);
+          const toIdx = nodeLabels.indexOf(to);
+
+          if (fromIdx === -1) {
+            setErrorMessage(`Node "${from}" in edge "${edgePairs[i]}" does not exist.`);
+            return false;
+          }
+          if (toIdx === -1) {
+            setErrorMessage(`Node "${to}" in edge "${edgePairs[i]}" does not exist.`);
+            return false;
+          }
+
+          newEdges.push({
+            id: i,
+            from: fromIdx,
+            to: toIdx,
+            weight: weight
+          });
+        }
+      }
+
+      // Update state
+      setNodes(newNodes);
+      setEdges(newEdges);
+      setErrorMessage('');
+      return true;
+    } catch (error) {
+      setErrorMessage(`Error parsing graph: ${error.message}`);
+      return false;
+    }
+  };
+
+  const applyCustomGraph = () => {
+    parseCustomGraph(nodesInput, edgesInput);
+  };
+
+  const generateRandomGraph = () => {
+    const nodeCount = 4 + Math.floor(Math.random() * 4); // 4-7 nodes
+    const labels = [];
+    for (let i = 0; i < nodeCount; i++) {
+      labels.push(String.fromCharCode(65 + i));
+    }
+
+    // Create random edges with random weights
+    const edges = [];
+    const edgeCount = nodeCount + Math.floor(Math.random() * nodeCount); // nodeCount to 2*nodeCount edges
+    
+    for (let i = 0; i < edgeCount; i++) {
+      const from = Math.floor(Math.random() * nodeCount);
+      let to = Math.floor(Math.random() * nodeCount);
+      
+      // Avoid self-loops
+      while (to === from) {
+        to = Math.floor(Math.random() * nodeCount);
+      }
+      
+      const weight = 1 + Math.floor(Math.random() * 9); // 1-9
+      edges.push(`${labels[from]}-${labels[to]}:${weight}`);
+    }
+
+    setNodesInput(labels.join(', '));
+    setEdgesInput(edges.join(', '));
+    parseCustomGraph(labels.join(', '), edges.join(', '));
+  };
+
+  const resetToDefault = () => {
+    setNodesInput('A, B, C, D, E');
+    setEdgesInput('A-B:4, A-D:2, B-C:5, B-D:1, C-E:2, D-E:8, D-C:6');
+    setNodes(DEFAULT_NODES);
+    setEdges(DEFAULT_EDGES);
+    setErrorMessage('');
+  };
 
   // Union-Find (Disjoint Set Union) implementation
   class UnionFind {
@@ -576,6 +738,93 @@ UNION(x, y):
         {/* Controls */}
         {tab === 'visualizer' && (
           <div className="bg-white/80 rounded-lg p-6 shadow-lg mb-6">
+            {/* Custom Graph Input */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+              <h4 className="font-semibold mb-3">Custom Graph Input</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Nodes (comma-separated, max 12):</label>
+                  <input
+                    type="text"
+                    value={nodesInput}
+                    onChange={(e) => setNodesInput(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="e.g., A, B, C, D"
+                    disabled={isRunning}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Edges (format: A-B:weight, comma-separated):</label>
+                  <input
+                    type="text"
+                    value={edgesInput}
+                    onChange={(e) => setEdgesInput(e.target.value)}
+                    className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                    placeholder="e.g., A-B:4, B-C:2, C-D:3"
+                    disabled={isRunning}
+                  />
+                </div>
+
+                {errorMessage && (
+                  <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                    <p className="text-red-700 text-sm">⚠️ {errorMessage}</p>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={applyCustomGraph}
+                    disabled={isRunning}
+                    className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 text-sm font-medium"
+                  >
+                    Apply Custom Graph
+                  </button>
+                  <button
+                    onClick={generateRandomGraph}
+                    disabled={isRunning}
+                    className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 text-sm font-medium"
+                  >
+                    🎲 Generate Random
+                  </button>
+                  <button
+                    onClick={resetToDefault}
+                    disabled={isRunning}
+                    className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50 text-sm font-medium"
+                  >
+                    Reset to Default
+                  </button>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold text-gray-600 mb-2">Quick Examples:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {examples.map(example => (
+                      <button
+                        key={example.name}
+                        onClick={() => loadExample(example.name)}
+                        disabled={isRunning}
+                        className="px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50 font-medium"
+                      >
+                        {example.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="font-semibold text-blue-800 text-sm mb-1">💡 Tips:</p>
+                  <ul className="text-blue-700 text-xs space-y-1 ml-4">
+                    <li>• Nodes: Single letters or numbers, comma-separated</li>
+                    <li>• Edges: Format A-B:weight (undirected edges)</li>
+                    <li>• Weights must be positive for MST calculation</li>
+                    <li>• Max 12 nodes for optimal visualization</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Animation Controls */}
             <div className="flex flex-wrap items-center gap-4 mb-4">
               <button
                 onClick={toggleAnimation}

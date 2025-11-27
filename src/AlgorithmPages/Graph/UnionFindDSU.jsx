@@ -15,6 +15,8 @@ function UnionFind() {
   const [currentNode, setCurrentNode] = useState(-1);
   const [highlightNodes, setHighlightNodes] = useState([]);
   const [pathCompressionSteps, setPathCompressionSteps] = useState([]);
+  const [customOperations, setCustomOperations] = useState('union(0,1), union(2,3), union(0,2), find(3)');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const initializeUnionFind = useCallback((size) => {
     const p = Array.from({ length: size }, (_, i) => i);
@@ -40,13 +42,125 @@ function UnionFind() {
     return p[x];
   }, []);
 
-  const generateOperations = useCallback(() => {
+  const parseCustomOperations = useCallback(() => {
+    try {
+      const ops = [];
+      
+      // Clean input: normalize and handle special characters
+      const cleaned = customOperations
+        .trim()
+        .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width spaces
+        .replace(/[""]/g, '"') // Normalize quotes
+        .replace(/['']/g, "'") // Normalize apostrophes
+        .replace(/\s+/g, ''); // Remove all whitespace
+      
+      if (!cleaned) {
+        throw new Error('Please enter at least one operation');
+      }
+      
+      // Convert to lowercase for case-insensitive matching
+      const normalized = cleaned.toLowerCase();
+      
+      // Split operations properly - only split at commas OUTSIDE parentheses
+      const opStrings = [];
+      let currentOp = '';
+      let depth = 0;
+      
+      for (let i = 0; i < normalized.length; i++) {
+        const char = normalized[i];
+        if (char === '(') {
+          depth++;
+          currentOp += char;
+        } else if (char === ')') {
+          depth--;
+          currentOp += char;
+        } else if (char === ',' && depth === 0) {
+          // Comma outside parentheses - this separates operations
+          if (currentOp.trim()) {
+            opStrings.push(currentOp.trim());
+          }
+          currentOp = '';
+        } else {
+          currentOp += char;
+        }
+      }
+      
+      // Don't forget the last operation
+      if (currentOp.trim()) {
+        opStrings.push(currentOp.trim());
+      }
+      
+      if (opStrings.length === 0) {
+        throw new Error('Please enter at least one operation');
+      }
+      
+      for (let i = 0; i < opStrings.length; i++) {
+        const opStr = opStrings[i];
+        
+        // Match union(x,y) - handles numbers with any digits
+        const unionMatch = opStr.match(/^union\((\d+),(\d+)\)$/);
+        // Match find(x)
+        const findMatch = opStr.match(/^find\((\d+)\)$/);
+        
+        if (unionMatch) {
+          const a = parseInt(unionMatch[1], 10);
+          const b = parseInt(unionMatch[2], 10);
+          if (a >= n || b >= n || a < 0 || b < 0) {
+            throw new Error(`Invalid node in union(${a},${b}). Nodes must be 0-${n-1}`);
+          }
+          ops.push({ type: 'union', a, b });
+        } else if (findMatch) {
+          const a = parseInt(findMatch[1], 10);
+          if (a >= n || a < 0) {
+            throw new Error(`Invalid node in find(${a}). Nodes must be 0-${n-1}`);
+          }
+          ops.push({ type: 'find', a });
+        } else {
+          // Debug: show what we're trying to parse
+          const cleaned = opStr.replace(/[^\x20-\x7E]/g, ''); // Remove non-printable chars
+          
+          // Provide more helpful error message
+          if (opStr.includes('union')) {
+            if (!opStr.includes('(')) {
+              throw new Error(`Missing opening parenthesis in operation ${i+1}: "${cleaned}"`);
+            } else if (!opStr.includes(')')) {
+              throw new Error(`Missing closing parenthesis in operation ${i+1}: "${cleaned}"`);
+            } else if (!opStr.includes(',')) {
+              throw new Error(`Missing comma in union operation ${i+1}: "${cleaned}". Use union(x,y)`);
+            } else {
+              throw new Error(`Invalid union format in operation ${i+1}: "${cleaned}". Use union(x,y)`);
+            }
+          } else if (opStr.includes('find')) {
+            if (!opStr.includes('(') || !opStr.includes(')')) {
+              throw new Error(`Invalid find format in operation ${i+1}: "${cleaned}". Use find(x)`);
+            } else {
+              throw new Error(`Invalid find format in operation ${i+1}: "${cleaned}". Use find(x)`);
+            }
+          } else {
+            throw new Error(`Unknown operation ${i+1}: "${cleaned}". Use union(x,y) or find(x)`);
+          }
+        }
+      }
+      
+      if (ops.length === 0) {
+        throw new Error('Please enter at least one operation');
+      }
+      
+      setErrorMessage('');
+      return ops;
+    } catch (error) {
+      setErrorMessage(error.message);
+      return null;
+    }
+  }, [customOperations, n]);
+
+  const generateOperations = useCallback((customOps = null) => {
     const operationSteps = [];
     const newParent = Array.from(parent);
     const newRank = Array.from(rank);
 
-    // Generate operations based on array size
-    const ops = n === 4 ? [
+    // Use custom operations if provided, otherwise use default operations
+    const ops = customOps || (n === 4 ? [
       { type: 'union', a: 0, b: 1 },
       { type: 'union', a: 2, b: 3 },
       { type: 'union', a: 0, b: 2 },
@@ -88,7 +202,7 @@ function UnionFind() {
       { type: 'union', a: 4, b: 6 },
       { type: 'union', a: 0, b: 4 },
       { type: 'find', a: 11 }
-    ];
+    ]);
 
     operationSteps.push({
       type: 'initialize',
@@ -271,6 +385,36 @@ function UnionFind() {
     const operationSteps = generateOperations();
     setSteps(operationSteps);
     setCurrentStep(0);
+  };
+
+  const runCustomOperations = () => {
+    const ops = parseCustomOperations();
+    if (ops) {
+      const operationSteps = generateOperations(ops);
+      setSteps(operationSteps);
+      setCurrentStep(0);
+    }
+  };
+
+  const generateRandomOperations = () => {
+    const opCount = Math.floor(Math.random() * 5) + 5; // 5-9 operations
+    const ops = [];
+    
+    for (let i = 0; i < opCount; i++) {
+      if (Math.random() < 0.75) { // 75% union, 25% find
+        const a = Math.floor(Math.random() * n);
+        const b = Math.floor(Math.random() * n);
+        if (a !== b) {
+          ops.push(`union(${a},${b})`);
+        }
+      } else {
+        const a = Math.floor(Math.random() * n);
+        ops.push(`find(${a})`);
+      }
+    }
+    
+    setCustomOperations(ops.join(', '));
+    setErrorMessage('');
   };
 
   const toggleAnimation = () => {
@@ -761,6 +905,52 @@ return component_count`}</code>
                 </div>
               </div>
             )}
+
+            {/* Custom Operations Input */}
+            <div className="pt-4 border-t-2 border-gray-300">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Custom Operations</h4>
+              
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Enter operations (comma-separated):
+              </label>
+              <input
+                type="text"
+                value={customOperations}
+                onChange={(e) => setCustomOperations(e.target.value)}
+                placeholder="e.g., union(0,1), union(2,3), find(1), union(0,2)"
+                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-3"
+              />
+
+              {errorMessage && (
+                <p className="text-red-600 text-sm font-semibold mb-3">⚠️ {errorMessage}</p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={runCustomOperations}
+                  className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Run Custom Operations
+                </button>
+                <button
+                  onClick={generateRandomOperations}
+                  className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors font-medium"
+                >
+                  Generate Random
+                </button>
+              </div>
+
+              <div className="mt-3 bg-indigo-50 rounded-lg p-3">
+                <p className="text-xs text-gray-600">
+                  <strong>Format:</strong> Use <code className="bg-white px-1 py-0.5 rounded">union(x,y)</code> to merge sets containing x and y, 
+                  or <code className="bg-white px-1 py-0.5 rounded">find(x)</code> to find the root of x. 
+                  Nodes must be between 0 and {n-1}.
+                </p>
+                <p className="text-xs text-gray-600 mt-2">
+                  <strong>Example:</strong> <code className="bg-white px-1 py-0.5 rounded">union(0,1), union(2,3), union(0,2), find(3)</code>
+                </p>
+              </div>
+            </div>
           </div>
         )}
 

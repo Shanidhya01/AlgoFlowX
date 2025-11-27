@@ -16,6 +16,72 @@ function KMPPatternMatcher() {
   const [lps, setLps] = useState([]);
   const [message, setMessage] = useState('');
   const [phase, setPhase] = useState('lps'); // 'lps' or 'search'
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Preset examples
+  const examples = [
+    { name: 'DNA Sequence', text: 'ABABDABACDABABCABAB', pattern: 'ABABCABAB' },
+    { name: 'Simple Repeat', text: 'AABAACAADAABAABA', pattern: 'AABA' },
+    { name: 'Book Search', text: 'THEQUICKBROWNFOXJUMPSOVERTHELAZYDOG', pattern: 'FOX' },
+    { name: 'Binary Pattern', text: '1001010101001010100101001010', pattern: '10101' },
+    { name: 'No Match', text: 'ABCDEFGHIJKLMNOP', pattern: 'XYZ' }
+  ];
+
+  const loadExample = (exampleName) => {
+    const example = examples.find(ex => ex.name === exampleName);
+    if (example) {
+      setText(example.text);
+      setPattern(example.pattern);
+      setErrorMessage('');
+      resetAnimation();
+    }
+  };
+
+  const generateRandomExample = () => {
+    const chars = 'ABCD';
+    const textLength = 15 + Math.floor(Math.random() * 15); // 15-30 chars
+    const patternLength = 3 + Math.floor(Math.random() * 5); // 3-7 chars
+    
+    let randomText = '';
+    for (let i = 0; i < textLength; i++) {
+      randomText += chars[Math.floor(Math.random() * chars.length)];
+    }
+    
+    let randomPattern = '';
+    for (let i = 0; i < patternLength; i++) {
+      randomPattern += chars[Math.floor(Math.random() * chars.length)];
+    }
+    
+    setText(randomText);
+    setPattern(randomPattern);
+    setErrorMessage('');
+    resetAnimation();
+  };
+
+  const validateInputs = () => {
+    if (!text.trim()) {
+      setErrorMessage('Please enter text to search in.');
+      return false;
+    }
+    if (!pattern.trim()) {
+      setErrorMessage('Please enter a pattern to search for.');
+      return false;
+    }
+    if (pattern.length > text.length) {
+      setErrorMessage('Pattern cannot be longer than text.');
+      return false;
+    }
+    if (text.length > 100) {
+      setErrorMessage('Text is too long. Maximum 100 characters for optimal visualization.');
+      return false;
+    }
+    if (pattern.length > 20) {
+      setErrorMessage('Pattern is too long. Maximum 20 characters for optimal visualization.');
+      return false;
+    }
+    setErrorMessage('');
+    return true;
+  };
 
   // Build LPS (Longest Proper Prefix which is also Suffix)
   const buildLPS = useCallback((pattern) => {
@@ -244,8 +310,7 @@ function KMPPatternMatcher() {
   }, [buildLPS]);
 
   const runAlgorithm = () => {
-    if (!text.trim() || !pattern.trim()) {
-      alert('Please enter both text and pattern');
+    if (!validateInputs()) {
       return;
     }
     const operationSteps = kmpSearch(text.toUpperCase(), pattern.toUpperCase());
@@ -314,7 +379,7 @@ function KMPPatternMatcher() {
               onChange={(e) => setText(e.target.value.toUpperCase())}
               disabled={isRunning || steps.length > 0}
               className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter text to search in"
+              placeholder="Enter text to search in (max 100 chars)"
             />
           </div>
 
@@ -326,8 +391,52 @@ function KMPPatternMatcher() {
               onChange={(e) => setPattern(e.target.value.toUpperCase())}
               disabled={isRunning || steps.length > 0}
               className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter pattern to find"
+              placeholder="Enter pattern to find (max 20 chars)"
             />
+          </div>
+
+          {errorMessage && (
+            <div className="bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 p-3 rounded">
+              <p className="text-red-700 dark:text-red-300 text-sm">
+                ⚠️ {errorMessage}
+              </p>
+            </div>
+          )}
+
+          {/* Preset Examples */}
+          <div className="border-t-2 border-gray-200 dark:border-gray-700 pt-4">
+            <h4 className="text-sm font-semibold mb-3 text-gray-700 dark:text-gray-300">Quick Examples:</h4>
+            <div className="flex flex-wrap gap-2 mb-3">
+              {examples.map((example) => (
+                <button
+                  key={example.name}
+                  onClick={() => loadExample(example.name)}
+                  disabled={isRunning || steps.length > 0}
+                  className="px-3 py-1.5 text-sm bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  {example.name}
+                </button>
+              ))}
+            </div>
+            
+            <button
+              onClick={generateRandomExample}
+              disabled={isRunning || steps.length > 0}
+              className="px-4 py-2 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              🎲 Generate Random
+            </button>
+          </div>
+
+          {/* Tips */}
+          <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+            <p className="font-semibold text-blue-800 dark:text-blue-300 text-sm mb-1">💡 Tips:</p>
+            <ul className="text-blue-700 dark:text-blue-400 text-xs space-y-1 ml-4">
+              <li>• Text and pattern are automatically converted to uppercase</li>
+              <li>• Try patterns with repeated characters to see LPS array in action</li>
+              <li>• KMP avoids re-scanning matched characters, making it O(n+m)</li>
+              <li>• Watch how the algorithm uses LPS values during mismatches</li>
+            </ul>
           </div>
         </div>
 
@@ -666,23 +775,34 @@ function KMPPatternMatcher() {
             </div>
 
             {steps.length > 0 && (
-              <div>
+              <div className="mt-4">
                 <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
                   <span>Step {currentStep + 1} of {steps.length}</span>
-                  <span>Time: {steps[currentStep].time} ms</span>
+                  <span className="font-semibold">{steps[currentStep]?.type || 'Processing'}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600 dark:text-gray-400">Input:</span>
-                  <span className="font-semibold">{steps[currentStep].input}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600 dark:text-gray-400">Output:</span>
-                  <span className="font-semibold">{steps[currentStep].output}</span>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                  ></div>
                 </div>
               </div>
             )}
           </div>
-        )}        
+        )}
+
+        {/* Main Content */}
+        {tab === 'visualizer' && renderVisualizer()}
+        {tab === 'theory' && <div className="mt-6"><TheorySection /></div>}
+        {tab === 'pseudocode' && <div className="mt-6"><PseudocodeSection /></div>}
+
+        {/* Step Information */}
+        {tab === 'visualizer' && steps[currentStep] && (
+          <div className="bg-white/90 dark:bg-gray-800 rounded-lg p-6 shadow-lg mt-6">
+            <h3 className="text-lg font-semibold mb-2">Current Step:</h3>
+            <p className="text-gray-700 dark:text-gray-300">{steps[currentStep].message}</p>
+          </div>
+        )}
       </div>
     </div>
   );

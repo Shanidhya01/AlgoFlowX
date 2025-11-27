@@ -12,28 +12,227 @@ function Greedy() {
 
   // Coin Change Problem
   const [targetAmount, setTargetAmount] = useState(67);
-  const [coinDenominations] = useState([25, 10, 5, 1]);
+  const [coinDenominations, setCoinDenominations] = useState([25, 10, 5, 1]);
+  const [coinsInput, setCoinsInput] = useState('25, 10, 5, 1');
   const [selectedCoins, setSelectedCoins] = useState([]);
 
   // Activity Selection Problem
-  const [activities] = useState([
+  const DEFAULT_ACTIVITIES = [
     { id: 1, start: 1, end: 4, name: 'Activity A' },
     { id: 2, start: 3, end: 5, name: 'Activity B' },
     { id: 3, start: 0, end: 6, name: 'Activity C' },
     { id: 4, start: 5, end: 7, name: 'Activity D' },
     { id: 5, start: 8, end: 9, name: 'Activity E' },
     { id: 6, start: 5, end: 9, name: 'Activity F' }
-  ]);
+  ];
+  const [activities, setActivities] = useState(DEFAULT_ACTIVITIES);
+  const [activitiesInput, setActivitiesInput] = useState('1-4, 3-5, 0-6, 5-7, 8-9, 5-9');
   const [selectedActivities, setSelectedActivities] = useState([]);
 
   // Fractional Knapsack Problem
-  const [items] = useState([
+  const DEFAULT_ITEMS = [
     { id: 1, weight: 10, value: 60, name: 'Item A' },
     { id: 2, weight: 20, value: 100, name: 'Item B' },
     { id: 3, weight: 30, value: 120, name: 'Item C' }
-  ]);
-  const [knapsackCapacity] = useState(50);
+  ];
+  const [items, setItems] = useState(DEFAULT_ITEMS);
+  const [knapsackCapacity, setKnapsackCapacity] = useState(50);
+  const [itemsInput, setItemsInput] = useState('10:60, 20:100, 30:120');
   const [knapsackItems, setKnapsackItems] = useState([]);
+
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Preset examples for Coin Change
+  const coinExamples = [
+    { name: 'US Coins', amount: 67, coins: [25, 10, 5, 1] },
+    { name: 'Simple', amount: 30, coins: [25, 10, 5, 1] },
+    { name: 'Euro', amount: 87, coins: [50, 20, 10, 5, 2, 1] },
+    { name: 'Large', amount: 199, coins: [100, 50, 20, 10, 5, 1] }
+  ];
+
+  const loadCoinExample = (exampleName) => {
+    const example = coinExamples.find(ex => ex.name === exampleName);
+    if (example) {
+      setTargetAmount(example.amount);
+      setCoinDenominations(example.coins);
+      setCoinsInput(example.coins.join(', '));
+      setErrorMessage('');
+    }
+  };
+
+  const generateRandomCoins = () => {
+    const amount = 20 + Math.floor(Math.random() * 80);
+    setTargetAmount(amount);
+    setErrorMessage('');
+  };
+
+  const applyCustomCoins = () => {
+    try {
+      const coins = coinsInput.split(',').map(c => parseInt(c.trim())).filter(c => !isNaN(c) && c > 0);
+      if (coins.length === 0) {
+        setErrorMessage('Please enter at least one coin denomination.');
+        return;
+      }
+      if (coins.length > 10) {
+        setErrorMessage('Maximum 10 coin denominations allowed.');
+        return;
+      }
+      coins.sort((a, b) => b - a);
+      setCoinDenominations(coins);
+      setErrorMessage('');
+    } catch (error) {
+      setErrorMessage('Invalid coin format. Use comma-separated numbers.');
+    }
+  };
+
+  // Activity Selection presets
+  const activityExamples = [
+    { name: 'Default', activities: '1-4, 3-5, 0-6, 5-7, 8-9, 5-9' },
+    { name: 'Simple', activities: '1-3, 2-5, 4-7, 6-9' },
+    { name: 'Complex', activities: '0-2, 1-4, 3-6, 5-8, 7-10, 2-5, 4-7, 6-9' }
+  ];
+
+  const loadActivityExample = (exampleName) => {
+    const example = activityExamples.find(ex => ex.name === exampleName);
+    if (example) {
+      setActivitiesInput(example.activities);
+      parseActivities(example.activities);
+    }
+  };
+
+  const parseActivities = (input) => {
+    try {
+      const activityPairs = input.split(',').map(a => a.trim()).filter(a => a.length > 0);
+      if (activityPairs.length === 0) {
+        setErrorMessage('Please enter at least one activity.');
+        return false;
+      }
+      if (activityPairs.length > 15) {
+        setErrorMessage('Maximum 15 activities allowed.');
+        return false;
+      }
+
+      const parsedActivities = [];
+      for (let i = 0; i < activityPairs.length; i++) {
+        const parts = activityPairs[i].split('-');
+        if (parts.length !== 2) {
+          setErrorMessage(`Invalid format for activity ${i + 1}. Use: start-end`);
+          return false;
+        }
+        const start = parseInt(parts[0]);
+        const end = parseInt(parts[1]);
+        if (isNaN(start) || isNaN(end)) {
+          setErrorMessage(`Invalid numbers in activity ${i + 1}.`);
+          return false;
+        }
+        if (start >= end) {
+          setErrorMessage(`Activity ${i + 1}: start must be less than end.`);
+          return false;
+        }
+        parsedActivities.push({
+          id: i + 1,
+          start,
+          end,
+          name: `Activity ${String.fromCharCode(65 + i)}`
+        });
+      }
+
+      setActivities(parsedActivities);
+      setErrorMessage('');
+      return true;
+    } catch (error) {
+      setErrorMessage('Invalid activity format.');
+      return false;
+    }
+  };
+
+  const generateRandomActivities = () => {
+    const count = 4 + Math.floor(Math.random() * 5);
+    const activityStrs = [];
+    for (let i = 0; i < count; i++) {
+      const start = Math.floor(Math.random() * 8);
+      const duration = 2 + Math.floor(Math.random() * 4);
+      activityStrs.push(`${start}-${start + duration}`);
+    }
+    const input = activityStrs.join(', ');
+    setActivitiesInput(input);
+    parseActivities(input);
+  };
+
+  // Knapsack presets
+  const knapsackExamples = [
+    { name: 'Default', capacity: 50, items: '10:60, 20:100, 30:120' },
+    { name: 'Simple', capacity: 30, items: '10:40, 20:60, 15:50' },
+    { name: 'Complex', capacity: 100, items: '20:100, 30:120, 10:60, 40:160, 25:80' }
+  ];
+
+  const loadKnapsackExample = (exampleName) => {
+    const example = knapsackExamples.find(ex => ex.name === exampleName);
+    if (example) {
+      setKnapsackCapacity(example.capacity);
+      setItemsInput(example.items);
+      parseKnapsackItems(example.items);
+    }
+  };
+
+  const parseKnapsackItems = (input) => {
+    try {
+      const itemPairs = input.split(',').map(i => i.trim()).filter(i => i.length > 0);
+      if (itemPairs.length === 0) {
+        setErrorMessage('Please enter at least one item.');
+        return false;
+      }
+      if (itemPairs.length > 10) {
+        setErrorMessage('Maximum 10 items allowed.');
+        return false;
+      }
+
+      const parsedItems = [];
+      for (let i = 0; i < itemPairs.length; i++) {
+        const parts = itemPairs[i].split(':');
+        if (parts.length !== 2) {
+          setErrorMessage(`Invalid format for item ${i + 1}. Use: weight:value`);
+          return false;
+        }
+        const weight = parseInt(parts[0]);
+        const value = parseInt(parts[1]);
+        if (isNaN(weight) || isNaN(value) || weight <= 0 || value <= 0) {
+          setErrorMessage(`Invalid numbers in item ${i + 1}.`);
+          return false;
+        }
+        parsedItems.push({
+          id: i + 1,
+          weight,
+          value,
+          name: `Item ${String.fromCharCode(65 + i)}`
+        });
+      }
+
+      setItems(parsedItems);
+      setErrorMessage('');
+      return true;
+    } catch (error) {
+      setErrorMessage('Invalid item format.');
+      return false;
+    }
+  };
+
+  const generateRandomKnapsack = () => {
+    const capacity = 30 + Math.floor(Math.random() * 70);
+    const itemCount = 3 + Math.floor(Math.random() * 4);
+    const itemStrs = [];
+    
+    for (let i = 0; i < itemCount; i++) {
+      const weight = 5 + Math.floor(Math.random() * 35);
+      const value = weight * (2 + Math.floor(Math.random() * 4));
+      itemStrs.push(`${weight}:${value}`);
+    }
+    
+    setKnapsackCapacity(capacity);
+    const input = itemStrs.join(', ');
+    setItemsInput(input);
+    parseKnapsackItems(input);
+  };
 
   // Coin Change Algorithm
   const coinChangeAlgorithm = useCallback(() => {
@@ -283,15 +482,74 @@ function Greedy() {
           <FaCoins className="text-yellow-500" />
           Coin Change Problem
         </h3>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2">Target Amount:</label>
-          <input
-            type="number"
-            value={targetAmount}
-            onChange={(e) => setTargetAmount(parseInt(e.target.value) || 0)}
-            className="w-full p-2 border rounded-lg"
-            disabled={isRunning}
-          />
+
+        {/* Custom Input Section */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+          <h4 className="font-semibold mb-3">Custom Input</h4>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium mb-2">Target Amount:</label>
+              <input
+                type="number"
+                value={targetAmount}
+                onChange={(e) => setTargetAmount(parseInt(e.target.value) || 0)}
+                className="w-full p-2 border rounded-lg"
+                disabled={isRunning}
+                min="1"
+                max="1000"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Coin Denominations (comma-separated):</label>
+              <input
+                type="text"
+                value={coinsInput}
+                onChange={(e) => setCoinsInput(e.target.value)}
+                className="w-full p-2 border rounded-lg"
+                disabled={isRunning}
+                placeholder="e.g., 25, 10, 5, 1"
+              />
+            </div>
+            
+            {errorMessage && selectedAlgorithm === 'coinChange' && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                <p className="text-red-700 text-sm">⚠️ {errorMessage}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={applyCustomCoins}
+                disabled={isRunning}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                Apply Custom Coins
+              </button>
+              <button
+                onClick={generateRandomCoins}
+                disabled={isRunning}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                🎲 Random Amount
+              </button>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2">Quick Examples:</p>
+              <div className="flex flex-wrap gap-2">
+                {coinExamples.map(example => (
+                  <button
+                    key={example.name}
+                    onClick={() => loadCoinExample(example.name)}
+                    disabled={isRunning}
+                    className="px-3 py-1 text-xs bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50"
+                  >
+                    {example.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
         
         <div className="grid grid-cols-4 gap-4 mb-6">
@@ -341,6 +599,63 @@ function Greedy() {
           <FaClock className="text-blue-500" />
           Activity Selection Problem
         </h3>
+
+        {/* Custom Input Section */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+          <h4 className="font-semibold mb-3">Custom Input</h4>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium mb-2">Activities (format: start-end, comma-separated):</label>
+              <input
+                type="text"
+                value={activitiesInput}
+                onChange={(e) => setActivitiesInput(e.target.value)}
+                className="w-full p-2 border rounded-lg"
+                disabled={isRunning}
+                placeholder="e.g., 1-4, 3-5, 0-6"
+              />
+            </div>
+            
+            {errorMessage && selectedAlgorithm === 'activitySelection' && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                <p className="text-red-700 text-sm">⚠️ {errorMessage}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => parseActivities(activitiesInput)}
+                disabled={isRunning}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                Apply Custom Activities
+              </button>
+              <button
+                onClick={generateRandomActivities}
+                disabled={isRunning}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                🎲 Generate Random
+              </button>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2">Quick Examples:</p>
+              <div className="flex flex-wrap gap-2">
+                {activityExamples.map(example => (
+                  <button
+                    key={example.name}
+                    onClick={() => loadActivityExample(example.name)}
+                    disabled={isRunning}
+                    className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50"
+                  >
+                    {example.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
         
         <div className="space-y-3">
           {activities.map(activity => {
@@ -409,6 +724,75 @@ function Greedy() {
           <FaWeight className="text-purple-500" />
           Fractional Knapsack Problem
         </h3>
+
+        {/* Custom Input Section */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border-2 border-gray-200">
+          <h4 className="font-semibold mb-3">Custom Input</h4>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium mb-2">Knapsack Capacity (kg):</label>
+              <input
+                type="number"
+                value={knapsackCapacity}
+                onChange={(e) => setKnapsackCapacity(parseInt(e.target.value) || 0)}
+                className="w-full p-2 border rounded-lg"
+                disabled={isRunning}
+                min="1"
+                max="500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Items (format: weight:value, comma-separated):</label>
+              <input
+                type="text"
+                value={itemsInput}
+                onChange={(e) => setItemsInput(e.target.value)}
+                className="w-full p-2 border rounded-lg"
+                disabled={isRunning}
+                placeholder="e.g., 10:60, 20:100, 30:120"
+              />
+            </div>
+            
+            {errorMessage && selectedAlgorithm === 'fractionalKnapsack' && (
+              <div className="bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                <p className="text-red-700 text-sm">⚠️ {errorMessage}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => parseKnapsackItems(itemsInput)}
+                disabled={isRunning}
+                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                Apply Custom Items
+              </button>
+              <button
+                onClick={generateRandomKnapsack}
+                disabled={isRunning}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 text-sm font-medium"
+              >
+                🎲 Generate Random
+              </button>
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2">Quick Examples:</p>
+              <div className="flex flex-wrap gap-2">
+                {knapsackExamples.map(example => (
+                  <button
+                    key={example.name}
+                    onClick={() => loadKnapsackExample(example.name)}
+                    disabled={isRunning}
+                    className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors disabled:opacity-50"
+                  >
+                    {example.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
         
         <div className="mb-4 bg-gray-100 rounded-lg p-4">
           <div className="text-lg font-semibold">
