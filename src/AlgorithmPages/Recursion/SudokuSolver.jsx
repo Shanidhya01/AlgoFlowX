@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Grid3x3 } from 'lucide-react';
+import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Grid3x3, Sparkles, ListChecks } from 'lucide-react';
 
 function SudokuSolver() {
   const [tab, setTab] = useState('visualizer');
@@ -7,6 +7,7 @@ function SudokuSolver() {
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState([]);
   const [animationSpeed, setAnimationSpeed] = useState(500);
+  const [base, setBase] = useState(3); // subgrid size; board N = base*base
 
   const [board, setBoard] = useState([]);
   const [originalBoard, setOriginalBoard] = useState([]);
@@ -15,8 +16,11 @@ function SudokuSolver() {
   const [backtracks, setBacktracks] = useState(0);
   const [filledCells, setFilledCells] = useState(0);
   const [candidates, setCandidates] = useState({});
+  const [errorMessage, setErrorMessage] = useState('');
+  const [puzzleInput, setPuzzleInput] = useState('');
+  const [cluesCount, setCluesCount] = useState(30);
 
-  // Initial Sudoku puzzle (0 = empty)
+  // Default 9x9 example (0 = empty)
   const initialPuzzle = [
     [5, 3, 0, 0, 7, 0, 0, 0, 0],
     [6, 0, 0, 1, 9, 5, 0, 0, 0],
@@ -28,46 +32,170 @@ function SudokuSolver() {
     [0, 0, 0, 4, 1, 9, 0, 0, 5],
     [0, 0, 0, 0, 8, 0, 0, 7, 9]
   ];
+  const makeEmptyBoard = (N) => Array.from({ length: N }, () => Array(N).fill(0));
 
   useEffect(() => {
-    const boardCopy = initialPuzzle.map(row => [...row]);
+    const N = base * base;
+    const initial = base === 3 ? initialPuzzle : makeEmptyBoard(N);
+    const boardCopy = initial.map(row => [...row]);
     setBoard(boardCopy);
     setOriginalBoard(boardCopy);
     setFilledCells(boardCopy.flat().filter(cell => cell !== 0).length);
-  }, []);
+    setPuzzleInput(formatBoard(initial));
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+  }, [base]);
+
+  const formatBoard = (b) => b.map(r => r.join(' ')).join('\n');
+
+  const parsePuzzle = (text) => {
+    const N = base * base;
+    const rows = text.trim().split(/\n+/);
+    if (rows.length !== N) throw new Error(`Puzzle must have ${N} lines`);
+    const grid = rows.map((line) => {
+      const vals = line.trim().split(/\s+/).map(v => v === '.' ? '0' : v);
+      if (vals.length !== N) throw new Error(`Each line must have ${N} numbers`);
+      const nums = vals.map(v => {
+        const n = parseInt(v, 10);
+        if (isNaN(n) || n < 0 || n > N) throw new Error(`Only integers 0..${N} (or . for empty)`);
+        return n;
+      });
+      return nums;
+    });
+    return grid;
+  };
+
+  const isSafe = (b, r, c, val) => {
+    const N = base * base;
+    for (let i = 0; i < N; i++) {
+      if (b[r][i] === val || b[i][c] === val) return false;
+    }
+    const br = Math.floor(r / base) * base;
+    const bc = Math.floor(c / base) * base;
+    for (let i = br; i < br + base; i++) {
+      for (let j = bc; j < bc + base; j++) {
+        if (b[i][j] === val) return false;
+      }
+    }
+    return true;
+  };
+
+  const validateNoConflicts = (b) => {
+    const N = base * base;
+    for (let r = 0; r < N; r++) {
+      for (let c = 0; c < N; c++) {
+        const val = b[r][c];
+        if (val === 0) continue;
+        b[r][c] = 0;
+        if (!isSafe(b, r, c, val)) {
+          b[r][c] = val;
+          return false;
+        }
+        b[r][c] = val;
+      }
+    }
+    return true;
+  };
+
+  const shuffled = (arr) => {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  const generateSolvedGrid = () => {
+    const N = base * base;
+    const g = Array.from({ length: N }, () => Array(N).fill(0));
+    const digits = Array.from({ length: N }, (_, i) => i + 1);
+    const fill = (r = 0, c = 0) => {
+      if (r === N) return true;
+      const nr = c === N - 1 ? r + 1 : r;
+      const nc = c === N - 1 ? 0 : c + 1;
+      for (const d of shuffled(digits)) {
+        if (isSafe(g, r, c, d)) {
+          g[r][c] = d;
+          if (fill(nr, nc)) return true;
+          g[r][c] = 0;
+        }
+      }
+      return false;
+    };
+    fill();
+    return g;
+  };
+
+  const generateRandomPuzzle = () => {
+    setErrorMessage('');
+    const solved = generateSolvedGrid();
+    const N = base * base;
+    const total = N * N;
+    const clampClues = Math.max(0, Math.min(total, cluesCount));
+    const toRemove = Math.max(0, total - clampClues);
+    const cells = Array.from({ length: total }, (_, i) => i);
+    for (let k = 0; k < toRemove; k++) {
+      const idx = Math.floor(Math.random() * cells.length);
+      const pos = cells.splice(idx, 1)[0];
+      const r = Math.floor(pos / N), c = pos % N;
+      solved[r][c] = 0;
+    }
+    setOriginalBoard(solved.map(row => [...row]));
+    setBoard(solved.map(row => [...row]));
+    setFilledCells(solved.flat().filter(x => x !== 0).length);
+    setPuzzleInput(formatBoard(solved));
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+  };
+
+  const applyCustomPuzzle = () => {
+    setErrorMessage('');
+    try {
+      const parsed = parsePuzzle(puzzleInput);
+      const copy = parsed.map(r => [...r]);
+      if (!validateNoConflicts(copy)) {
+        setErrorMessage('Invalid puzzle: row/column/box conflict detected.');
+        return;
+      }
+      setOriginalBoard(copy);
+      setBoard(copy.map(r => [...r]));
+      setFilledCells(copy.flat().filter(x => x !== 0).length);
+      setSteps([]);
+      setCurrentStep(0);
+      setIsRunning(false);
+    } catch (e) {
+      setErrorMessage(e.message || 'Invalid puzzle format.');
+    }
+  };
 
   // Get candidates for a cell
   const getCandidates = (board, row, col) => {
+    const N = base * base;
     if (board[row][col] !== 0) return [];
-    
-    const candidates = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9]);
-    
-    // Check row
-    for (let i = 0; i < 9; i++) {
+    const candidates = new Set(Array.from({ length: N }, (_, i) => i + 1));
+    for (let i = 0; i < N; i++) {
       candidates.delete(board[row][i]);
-    }
-    
-    // Check column
-    for (let i = 0; i < 9; i++) {
       candidates.delete(board[i][col]);
     }
-    
-    // Check 3x3 box
-    const boxRow = Math.floor(row / 3) * 3;
-    const boxCol = Math.floor(col / 3) * 3;
-    for (let i = boxRow; i < boxRow + 3; i++) {
-      for (let j = boxCol; j < boxCol + 3; j++) {
+    const boxRow = Math.floor(row / base) * base;
+    const boxCol = Math.floor(col / base) * base;
+    for (let i = boxRow; i < boxRow + base; i++) {
+      for (let j = boxCol; j < boxCol + base; j++) {
         candidates.delete(board[i][j]);
       }
     }
-    
     return Array.from(candidates);
   };
 
   // Find next empty cell
   const findEmptyCell = (board) => {
-    for (let i = 0; i < 9; i++) {
-      for (let j = 0; j < 9; j++) {
+    const N = base * base;
+    for (let i = 0; i < N; i++) {
+      for (let j = 0; j < N; j++) {
         if (board[i][j] === 0) {
           return [i, j];
         }
@@ -78,9 +206,9 @@ function SudokuSolver() {
 
   const solveSudoku = useCallback(() => {
     const operationSteps = [];
-    const boardCopy = initialPuzzle.map(row => [...row]);
+    const boardCopy = originalBoard.map(row => [...row]);
     let backtrackCount = 0;
-    let cellsFilled = initialPuzzle.flat().filter(cell => cell !== 0).length;
+    let cellsFilled = originalBoard.flat().filter(cell => cell !== 0).length;
 
     operationSteps.push({
       type: 'initialize',
@@ -94,9 +222,10 @@ function SudokuSolver() {
 
     const backtrack = (board, row = 0, col = 0) => {
       // Find next empty cell
+      const N = base * base;
       let found = false;
-      for (let i = row; i < 9; i++) {
-        for (let j = (i === row ? col : 0); j < 9; j++) {
+      for (let i = row; i < N; i++) {
+        for (let j = (i === row ? col : 0); j < N; j++) {
           if (board[i][j] === 0) {
             row = i;
             col = j;
@@ -115,7 +244,7 @@ function SudokuSolver() {
           currentCell: null,
           candidates: {},
           backtracks: backtrackCount,
-          filledCells: 81
+          filledCells: (base*base)*(base*base)
         });
         return true;
       }
@@ -191,38 +320,48 @@ function SudokuSolver() {
 
     operationSteps.push({
       type: 'complete',
-      message: `✓ Complete! Backtracked ${backtrackCount} times. Time: O(9^(n*m)) where n,m are empty cells.`,
+      message: `✓ Complete! Backtracked ${backtrackCount} times.`,
       board: boardCopy.map(b => [...b]),
       currentCell: null,
       candidates: {},
       backtracks: backtrackCount,
-      filledCells: 81
+      filledCells: (base*base)*(base*base)
     });
 
     return operationSteps;
-  }, [initialPuzzle]);
+  }, [originalBoard, base]);
 
   const runAlgorithm = () => {
+    setErrorMessage('');
     const operationSteps = solveSudoku();
     setSteps(operationSteps);
     setCurrentStep(0);
   };
 
   const toggleAnimation = () => {
+    if (!isRunning && steps.length === 0) {
+      runAlgorithm();
+    }
     setIsRunning(!isRunning);
   };
 
   const resetAnimation = () => {
     setIsRunning(false);
     setCurrentStep(0);
-    setBoard(initialPuzzle.map(row => [...row]));
+    const N = base*base;
+    const init = base === 3 ? initialPuzzle : makeEmptyBoard(N);
+    setBoard(init.map(row => [...row]));
     setCurrentCell(null);
     setBacktracks(0);
-    setFilledCells(initialPuzzle.flat().filter(cell => cell !== 0).length);
+    setFilledCells(init.flat().filter(cell => cell !== 0).length);
     setCandidates({});
   };
 
   const stepForward = () => {
+    if (steps.length === 0) {
+      runAlgorithm();
+      return;
+    }
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -275,13 +414,13 @@ function SudokuSolver() {
                       ? 'bg-green-100 text-green-900'
                       : 'bg-white'
                   } ${
-                    (rowIdx + 1) % 3 === 0 && rowIdx !== 8 ? 'border-b-4' : ''
+                    (rowIdx + 1) % base === 0 && rowIdx !== (base*base - 1) ? 'border-b-4' : ''
                   } ${
-                    (colIdx + 1) % 3 === 0 && colIdx !== 8 ? 'border-r-4' : ''
+                    (colIdx + 1) % base === 0 && colIdx !== (base*base - 1) ? 'border-r-4' : ''
                   }`}
                   style={{
-                    borderBottomWidth: (rowIdx + 1) % 3 === 0 && rowIdx !== 8 ? '4px' : '1px',
-                    borderRightWidth: (colIdx + 1) % 3 === 0 && colIdx !== 8 ? '4px' : '1px'
+                    borderBottomWidth: (rowIdx + 1) % base === 0 && rowIdx !== (base*base - 1) ? '4px' : '1px',
+                    borderRightWidth: (colIdx + 1) % base === 0 && colIdx !== (base*base - 1) ? '4px' : '1px'
                   }}
                 >
                   {cell !== 0 ? cell : ''}
@@ -316,12 +455,12 @@ function SudokuSolver() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Cells Filled</p>
-                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{filledCells}/81</p>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{filledCells}/{(base*base)*(base*base)}</p>
                 </div>
                 <div className="w-full bg-gray-300 dark:bg-gray-600 rounded-full h-3">
                   <div
                     className="bg-gradient-to-r from-blue-500 to-green-500 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${(filledCells / 81) * 100}%` }}
+                    style={{ width: `${(filledCells / ((base*base)*(base*base))) * 100}%` }}
                   ></div>
                 </div>
                 <div>
@@ -582,6 +721,15 @@ GET-CANDIDATES(board, row, col):
                   <option value={100}>Fast</option>
                   <option value={10}>Very Fast</option>
                 </select>
+                <span className="text-sm font-medium ml-4">Base:</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={4}
+                  value={base}
+                  onChange={(e)=>setBase(Math.max(2, Math.min(4, parseInt(e.target.value)||3)))}
+                  className="w-20 px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                />
               </div>
             </div>
 
@@ -599,6 +747,83 @@ GET-CANDIDATES(board, row, col):
                 </div>
               </div>
             )}
+            {errorMessage && (
+              <div className="mt-4 p-3 rounded-lg border-l-4 border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                {errorMessage}
+              </div>
+            )}
+
+            {/* Input & Presets Panel */}
+            <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 mb-3">
+                <ListChecks className="text-blue-600" size={18} />
+                <h4 className="font-semibold">Examples</h4>
+              </div>
+              {base === 3 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {["530070000 600195000 098000060 800060003 400803001 700020006 060000280 000419005 000080079",
+                  "003020600 900305001 001806400 008102900 700000008 006708200 002609500 800203009 005010300",
+                  "000260701 680070090 190004500 820100040 004602900 050003028 009300074 040050036 703018000"].map((s, idx) => (
+                  <button key={idx}
+                    onClick={() => { setPuzzleInput(s.split(' ').map(r=>r.split('').join(' ')).join('\n')); setErrorMessage(''); }}
+                    className="px-3 py-1 text-sm rounded-full border border-gray-300 hover:border-gray-500">
+                    Puzzle {idx+1}
+                  </button>
+                ))}
+              </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold mb-2">Puzzle ({base*base} lines, use 0 or . for empty)</label>
+                  <textarea
+                    rows={Math.min(12, base*base)}
+                    value={puzzleInput}
+                    onChange={(e)=>setPuzzleInput(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white font-mono text-sm"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">Tip: Separate by spaces is okay. Each line must have {base*base} numbers.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-2">Clues (given cells)</label>
+                  <input type="number" min={1} max={(base*base)*(base*base)} value={cluesCount}
+                    onChange={(e)=>setCluesCount(parseInt(e.target.value)||30)}
+                    className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg"/>
+                  <div className="flex flex-col gap-2 mt-3">
+                    <button onClick={generateRandomPuzzle}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg">
+                      <Sparkles size={18}/> Random Puzzle
+                    </button>
+                    <button onClick={applyCustomPuzzle}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg">
+                      Apply Puzzle
+                    </button>
+                    <button onClick={() => {
+                        const N = base*base;
+                        const init = base === 3 ? initialPuzzle : Array.from({ length: N }, () => Array(N).fill(0));
+                        const boardCopy = init.map(r=>[...r]);
+                        setOriginalBoard(boardCopy);
+                        setBoard(boardCopy);
+                        setFilledCells(boardCopy.flat().filter(x=>x!==0).length);
+                        setPuzzleInput(formatBoard(boardCopy));
+                        setSteps([]); setCurrentStep(0); setIsRunning(false); setErrorMessage('');
+                      }}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg">
+                      <RotateCcw size={18}/> Reset to Default
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-3 rounded-lg text-sm text-blue-900 dark:text-blue-200">
+                <p className="font-semibold mb-1">Tips</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li>Provide {base*base} lines, each with {base*base} integers (0 or . for empty).</li>
+                  <li>Random puzzle removes cells from a valid solved grid based on clues.</li>
+                  <li>Validation checks basic conflicts; not all custom puzzles are guaranteed solvable.</li>
+                </ul>
+              </div>
+            </div>
           </div>
         )}
 
@@ -614,12 +839,6 @@ GET-CANDIDATES(board, row, col):
             <p className="text-gray-700 dark:text-gray-300">{message}</p>
           </div>
         )}
-
-        {/* Footer */}
-        <div className="mt-12 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6 text-center shadow-lg">
-          <h3 className="text-xl font-bold mb-2">Master Constraint Satisfaction! 🧩</h3>
-          <p>Sudoku solvers demonstrate how backtracking efficiently navigates massive solution spaces through smart pruning and constraint satisfaction.</p>
-        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, GitBranch } from 'lucide-react';
+import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, GitBranch, Sparkles, ListChecks } from 'lucide-react';
 
 function BacktrackingVisualizer() {
   const [tab, setTab] = useState('visualizer');
@@ -10,14 +10,29 @@ function BacktrackingVisualizer() {
 
   const [problem, setProblem] = useState('subset');
   const [n, setN] = useState(3);
+  const [inputValues, setInputValues] = useState('1,2,3');
+  const [k, setK] = useState(2);
+  const [randomCount, setRandomCount] = useState(4);
+  const [randomType, setRandomType] = useState('numbers'); // numbers | letters
   const [currentPath, setCurrentPath] = useState([]);
   const [allSolutions, setAllSolutions] = useState([]);
   const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const getArray = useCallback(() => {
+    const tokens = inputValues
+      .split(/[ ,]+/)
+      .map(t => t.trim())
+      .filter(Boolean)
+      .map(t => t);
+    if (tokens.length > 0) return tokens;
+    return Array.from({ length: n }, (_, i) => String(i + 1));
+  }, [inputValues, n]);
 
   // Subset Generation
   const subsetBacktrack = useCallback(() => {
     const operationSteps = [];
-    const arr = Array.from({ length: n }, (_, i) => i + 1);
+    const arr = getArray();
     const solutions = [];
 
     operationSteps.push({
@@ -86,12 +101,12 @@ function BacktrackingVisualizer() {
     });
 
     return operationSteps;
-  }, [n]);
+  }, [getArray]);
 
   // Permutation Generation
   const permutationBacktrack = useCallback(() => {
     const operationSteps = [];
-    const arr = Array.from({ length: n }, (_, i) => i + 1);
+    const arr = getArray();
     const solutions = [];
 
     operationSteps.push({
@@ -144,28 +159,28 @@ function BacktrackingVisualizer() {
     });
 
     return operationSteps;
-  }, [n]);
+  }, [getArray]);
 
   // Combinations Generation
   const combinationBacktrack = useCallback(() => {
     const operationSteps = [];
-    const arr = Array.from({ length: n }, (_, i) => i + 1);
-    const k = Math.ceil(n / 2);
+    const arr = getArray();
+    const targetK = Math.max(1, Math.min(k, arr.length));
     const solutions = [];
 
     operationSteps.push({
       type: 'initialize',
-      message: `Generate all ${k}-combinations of [${arr.join(', ')}] using backtracking.`,
+      message: `Generate all ${targetK}-combinations of [${arr.join(', ')}] using backtracking.`,
       currentPath: [],
       allSolutions: [],
     });
 
     const backtrack = (start, current) => {
-      if (current.length === k) {
+      if (current.length === targetK) {
         solutions.push([...current]);
         operationSteps.push({
           type: 'solution_found',
-          message: `✓ Found ${k}-combination: [${current.join(', ')}]`,
+          message: `✓ Found ${targetK}-combination: [${current.join(', ')}]`,
           currentPath: [...current],
           allSolutions: [...solutions],
         });
@@ -203,11 +218,32 @@ function BacktrackingVisualizer() {
     });
 
     return operationSteps;
-  }, [n]);
+  }, [getArray, k]);
 
   const runAlgorithm = () => {
-    let operationSteps = [];
+    setErrorMessage('');
+    const arr = getArray();
 
+    if (!arr || arr.length === 0) {
+      setErrorMessage('Please provide at least one element.');
+      return;
+    }
+    if (problem === 'permutation' && arr.length > 8) {
+      setErrorMessage('Permutations grow fast. Limit array size to 8 or fewer.');
+      return;
+    }
+    if (problem === 'combination') {
+      if (arr.length < 2) {
+        setErrorMessage('Provide at least 2 elements for combinations.');
+        return;
+      }
+      if (k < 1 || k > arr.length) {
+        setErrorMessage(`k must be between 1 and ${arr.length}.`);
+        return;
+      }
+    }
+
+    let operationSteps = [];
     if (problem === 'subset') {
       operationSteps = subsetBacktrack();
     } else if (problem === 'permutation') {
@@ -221,6 +257,9 @@ function BacktrackingVisualizer() {
   };
 
   const toggleAnimation = () => {
+    if (!isRunning && steps.length === 0) {
+      runAlgorithm();
+    }
     setIsRunning(!isRunning);
   };
 
@@ -232,9 +271,65 @@ function BacktrackingVisualizer() {
   };
 
   const stepForward = () => {
+    if (steps.length === 0) {
+      runAlgorithm();
+      return;
+    }
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
+  };
+
+  // Presets and random generation
+  const examples = [
+    { label: '[1,2,3]', arr: ['1','2','3'] },
+    { label: '[a,b,c]', arr: ['a','b','c'] },
+    { label: '[A,B,C,D]', arr: ['A','B','C','D'] },
+    { label: '[1,2,2]', arr: ['1','2','2'] },
+  ];
+
+  const loadExample = (ex) => {
+    setInputValues(ex.arr.join(','));
+    if (problem === 'combination') {
+      setK(Math.min(2, ex.arr.length));
+    }
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+  };
+
+  const generateRandomArray = () => {
+    const count = Math.max(2, Math.min(12, randomCount));
+    let arr;
+    if (randomType === 'letters') {
+      const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      arr = Array.from({ length: count }, () => alphabet[Math.floor(Math.random() * alphabet.length)]);
+    } else {
+      arr = Array.from({ length: count }, () => String(Math.floor(Math.random() * 20) + 1));
+    }
+    setInputValues(arr.join(','));
+    if (problem === 'combination') {
+      setK(Math.min(2, arr.length));
+    }
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+  };
+
+  const resetToDefault = () => {
+    setN(3);
+    setInputValues('1,2,3');
+    setK(2);
+    setRandomCount(4);
+    setRandomType('numbers');
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+    setCurrentPath([]);
+    setAllSolutions([]);
   };
 
   useEffect(() => {
@@ -466,7 +561,7 @@ function BacktrackingVisualizer() {
             {[
               { id: 'visualizer', label: 'Visualizer', icon: GitBranch },
               { id: 'theory', label: 'Theory', icon: BookOpen },
-              { id: 'pseudocode', label: 'Patterns', icon: Code }
+              { id: 'pseudocode', label: 'Code', icon: Code }
             ].map(t => {
               const Icon = t.icon;
               return (
@@ -512,10 +607,122 @@ function BacktrackingVisualizer() {
                   onChange={(e) => setN(parseInt(e.target.value))}
                   disabled={isRunning || steps.length > 0}
                   min="2"
-                  max="5"
+                  max="10"
                   className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">If Array Values is empty, we use [1..N].</p>
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold mb-2">Array Values:</label>
+                <input
+                  type="text"
+                  value={inputValues}
+                  onChange={(e) => setInputValues(e.target.value)}
+                  disabled={isRunning || steps.length > 0}
+                  placeholder="e.g., 1,2,3 or a,b,c (leave empty to use [1..N])"
+                  className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Separate by commas or spaces. Max 12 items recommended.</p>
+              </div>
+              {problem === 'combination' && (
+                <div>
+                  <label className="block text-sm font-semibold mb-2">k (choose):</label>
+                  <input
+                    type="number"
+                    value={k}
+                    onChange={(e) => setK(parseInt(e.target.value) || 0)}
+                    disabled={isRunning || steps.length > 0}
+                    min="1"
+                    max={getArray().length || 1}
+                    className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+            </div>
+
+            {errorMessage && (
+              <div className="mb-4 p-3 rounded-lg border-l-4 border-red-500 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                {errorMessage}
+              </div>
+            )}
+
+            {/* Presets, Random, Reset */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <ListChecks className="text-blue-600" size={18} />
+                <h4 className="font-semibold">Examples</h4>
+              </div>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {examples.map((ex) => (
+                  <button
+                    key={ex.label}
+                    onClick={() => loadExample(ex)}
+                    disabled={isRunning}
+                    className="px-3 py-1 text-sm rounded-full border border-gray-300 dark:border-gray-600 hover:border-gray-500 dark:hover:border-gray-400"
+                    title={`Load ${ex.label}`}
+                  >
+                    {ex.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                <div>
+                  <label className="block text-sm font-semibold mb-1">Random Count</label>
+                  <input
+                    type="number"
+                    min="2"
+                    max="12"
+                    value={randomCount}
+                    onChange={(e) => setRandomCount(parseInt(e.target.value) || 2)}
+                    disabled={isRunning}
+                    className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold mb-1">Random Type</label>
+                  <select
+                    value={randomType}
+                    onChange={(e) => setRandomType(e.target.value)}
+                    disabled={isRunning}
+                    className="w-full px-3 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="numbers">Numbers</option>
+                    <option value="letters">Letters</option>
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={generateRandomArray}
+                    disabled={isRunning}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg"
+                  >
+                    <Sparkles size={18} /> Random Array
+                  </button>
+                </div>
+              </div>
+
+              <button
+                onClick={resetToDefault}
+                disabled={isRunning}
+                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+              >
+                <RotateCcw size={18} /> Reset to Default
+              </button>
+            </div>
+
+            {/* Tips */}
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 p-4 rounded-lg mb-4 text-sm text-blue-900 dark:text-blue-200">
+              <p className="font-semibold mb-1">Tips</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Use custom array for named items (e.g., a,b,c,d).</li>
+                <li>Permutations scale as n!, keep n small to visualize smoothly.</li>
+                <li>Combinations require k between 1 and array length.</li>
+                <li>Duplicates are treated as distinct positions; results may include similar sequences.</li>
+              </ul>
             </div>
 
             <div className="flex flex-wrap items-center gap-4 mb-4">

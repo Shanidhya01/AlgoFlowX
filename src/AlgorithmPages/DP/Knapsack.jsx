@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Backpack } from 'lucide-react';
+import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Backpack, Plus, Trash2, Settings } from 'lucide-react';
 
 function Knapsack() {
   const [tab, setTab] = useState('visualizer');
@@ -7,6 +7,7 @@ function Knapsack() {
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState([]);
   const [animationSpeed, setAnimationSpeed] = useState(800);
+  const [showInputPanel, setShowInputPanel] = useState(true);
 
   const [items, setItems] = useState([
     { id: 0, weight: 2, value: 3, selected: false },
@@ -16,6 +17,9 @@ function Knapsack() {
   ]);
 
   const [capacity, setCapacity] = useState(8);
+  const [newItemWeight, setNewItemWeight] = useState('');
+  const [newItemValue, setNewItemValue] = useState('');
+  const [newCapacity, setNewCapacity] = useState('8');
   const [dp, setDp] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [currentCell, setCurrentCell] = useState(null);
@@ -201,6 +205,52 @@ function Knapsack() {
     return operationSteps;
   }, [items, capacity]);
 
+  const addItem = () => {
+    const weight = parseInt(newItemWeight);
+    const value = parseInt(newItemValue);
+
+    if (isNaN(weight) || isNaN(value) || weight <= 0 || value <= 0) {
+      alert('Please enter valid positive numbers for weight and value');
+      return;
+    }
+
+    const newItem = {
+      id: items.length,
+      weight: weight,
+      value: value,
+      selected: false
+    };
+
+    setItems([...items, newItem]);
+    setNewItemWeight('');
+    setNewItemValue('');
+  };
+
+  const removeItem = (id) => {
+    setItems(items.filter(item => item.id !== id));
+  };
+
+  const updateCapacity = () => {
+    const newCap = parseInt(newCapacity);
+    if (isNaN(newCap) || newCap <= 0) {
+      alert('Please enter a valid positive number for capacity');
+      return;
+    }
+    setCapacity(newCap);
+  };
+
+  const resetToDefault = () => {
+    setItems([
+      { id: 0, weight: 2, value: 3, selected: false },
+      { id: 1, weight: 3, value: 4, selected: false },
+      { id: 2, weight: 4, value: 5, selected: false },
+      { id: 3, weight: 5, value: 6, selected: false }
+    ]);
+    setCapacity(8);
+    setNewCapacity('8');
+    resetAnimation();
+  };
+
   const runAlgorithm = () => {
     const operationSteps = knapsackAlgorithm();
     setSteps(operationSteps);
@@ -208,6 +258,9 @@ function Knapsack() {
   };
 
   const toggleAnimation = () => {
+    if (!isRunning && steps.length === 0) {
+      runAlgorithm();
+    }
     setIsRunning(!isRunning);
   };
 
@@ -221,6 +274,10 @@ function Knapsack() {
   };
 
   const stepForward = () => {
+    if (steps.length === 0) {
+      runAlgorithm();
+      return;
+    }
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
@@ -248,6 +305,115 @@ function Knapsack() {
       setMessage(step.message || '');
     }
   }, [currentStep, steps]);
+
+  const InputPanel = () => (
+    <div className="bg-white/90 rounded-lg p-6 shadow-lg mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-2xl font-semibold flex items-center gap-2">
+          <Settings className="text-blue-600" size={28} />
+          Configure Problem
+        </h3>
+        <button
+          onClick={() => setShowInputPanel(!showInputPanel)}
+          className="text-gray-600 hover:text-gray-900 font-semibold"
+        >
+          {showInputPanel ? '▼' : '▶'}
+        </button>
+      </div>
+
+      {showInputPanel && (
+        <div className="space-y-6">
+          {/* Capacity Section */}
+          <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+            <h4 className="font-semibold text-blue-900 mb-3">Knapsack Capacity</h4>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                value={newCapacity}
+                onChange={(e) => setNewCapacity(e.target.value)}
+                placeholder="Enter capacity"
+                className="flex-1 px-4 py-2 border-2 border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                min="1"
+              />
+              <button
+                onClick={updateCapacity}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+              >
+                Set
+              </button>
+            </div>
+            <p className="text-sm text-blue-700 mt-2">Current capacity: <span className="font-bold">{capacity}</span></p>
+          </div>
+
+          {/* Items Section */}
+          <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+            <h4 className="font-semibold text-green-900 mb-3">Add New Item</h4>
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={newItemWeight}
+                  onChange={(e) => setNewItemWeight(e.target.value)}
+                  placeholder="Weight"
+                  className="flex-1 px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  min="1"
+                />
+                <input
+                  type="number"
+                  value={newItemValue}
+                  onChange={(e) => setNewItemValue(e.target.value)}
+                  placeholder="Value"
+                  className="flex-1 px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  min="1"
+                />
+              </div>
+              <button
+                onClick={addItem}
+                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <Plus size={18} /> Add Item
+              </button>
+            </div>
+          </div>
+
+          {/* Current Items List */}
+          <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+            <h4 className="font-semibold text-purple-900 mb-3">Current Items ({items.length})</h4>
+            {items.length === 0 ? (
+              <p className="text-gray-600 text-sm">No items yet. Add some items to get started!</p>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {items.map((item) => (
+                  <div key={item.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-purple-200">
+                    <div className="flex items-center gap-3 flex-1">
+                      <span className="font-semibold text-purple-700">Item {item.id + 1}</span>
+                      <span className="text-sm text-gray-600">W: <span className="font-mono font-bold">{item.weight}</span></span>
+                      <span className="text-sm text-gray-600">V: <span className="font-mono font-bold">{item.value}</span></span>
+                    </div>
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                      title="Remove item"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Reset Button */}
+          <button
+            onClick={resetToDefault}
+            className="w-full px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium transition-colors"
+          >
+            Reset to Default
+          </button>
+        </div>
+      )}
+    </div>
+  );
 
   const renderVisualizer = () => (
     <div className="space-y-6">
@@ -516,49 +682,19 @@ function Knapsack() {
 dp = create array[capacity+1]
 
 for i = 0 to n:
-  // Traverse right-to-left to avoid
-  // using updated values in same iteration
-  for w = capacity down to weight[i]:
-    dp[w] = max(dp[w],
-                dp[w-weight[i]]+value[i])`}</code>
+  item = items[i-1]
+  for w = 1 to capacity:
+    // Option 1: Don't take item
+    dont_take = dp[w]
+    
+    // Option 2: Take item (if it fits)
+    take = -INFINITY
+    if item.weight <= w:
+      take = dp[w - item.weight] + item.value
+    
+    // Choose better option
+    dp[w] = max(dont_take, take)`}</code>
           </pre>
-        </div>
-
-        <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-          <h4 className="font-semibold mb-2 text-green-900">Backtracking to Find Items</h4>
-          <pre className="bg-white text-gray-900 rounded p-3 text-xs overflow-auto border border-green-200 font-mono">
-            <code>{`selected = []
-i = n, w = capacity
-
-while i > 0 and w > 0:
-  // Check if item was included
-  if dp[i][w] != dp[i-1][w]:
-    selected.append(items[i-1])
-    // Reduce capacity by item weight
-    w -= items[i-1].weight
-  
-  i -= 1
-
-return selected`}</code>
-          </pre>
-        </div>
-
-        <div className="bg-purple-50 rounded-lg p-4 border border-purple-200 md:col-span-2">
-          <h4 className="font-semibold mb-2 text-purple-900">DP Table Interpretation</h4>
-          <div className="text-sm text-gray-700 space-y-2">
-            <p>
-              • <span className="font-semibold">dp[i][w]:</span> Maximum value considering first i items with capacity w
-            </p>
-            <p>
-              • <span className="font-semibold">dp[i][w] = dp[i-1][w]:</span> Item i not taken (value unchanged)
-            </p>
-            <p>
-              • <span className="font-semibold">dp[i][w] {'>'} dp[i-1][w]:</span> Item i was taken (value increased)
-            </p>
-            <p>
-              • <span className="font-semibold">Last cell dp[n][W]:</span> Optimal solution value
-            </p>
-          </div>
         </div>
       </div>
     </div>
@@ -570,10 +706,10 @@ return selected`}</code>
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 mb-3">
-            0/1 Knapsack Problem Visualizer
+            0/1 Knapsack Visualizer
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Master dynamic programming by visualizing how the knapsack algorithm optimally selects items to maximize value.
+            Build the DP table step-by-step and see how the optimal set of items is chosen under a capacity constraint.
           </p>
         </div>
 
@@ -603,75 +739,64 @@ return selected`}</code>
           </div>
         </div>
 
-        {/* Controls */}
+        {/* Visualizer Controls and Inputs */}
         {tab === 'visualizer' && (
-          <div className="bg-white/80 rounded-lg p-6 shadow-lg mb-6">
-            <div className="flex flex-wrap items-center gap-4 mb-4">
-              <button
-                onClick={runAlgorithm}
-                disabled={isRunning}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors font-medium"
-              >
-                <Backpack size={18} /> Solve
-              </button>
+          <>
+            <InputPanel />
 
-              <button
-                onClick={toggleAnimation}
-                disabled={steps.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 transition-colors font-medium"
-              >
-                {isRunning ? <Pause size={18} /> : <Play size={18} />}
-                {isRunning ? 'Pause' : 'Play'}
-              </button>
-
-              <button
-                onClick={stepForward}
-                disabled={currentStep >= steps.length - 1 || steps.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition-colors font-medium"
-              >
-                <StepForward size={18} /> Step
-              </button>
-
-              <button
-                onClick={resetAnimation}
-                disabled={steps.length === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors font-medium"
-              >
-                <RotateCcw size={18} /> Reset
-              </button>
-
-              <div className="flex items-center gap-2 ml-auto">
-                <span className="text-sm font-medium">Speed:</span>
-                <select
-                  value={animationSpeed}
-                  onChange={(e) => setAnimationSpeed(parseInt(e.target.value))}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            <div className="bg-white/80 rounded-lg p-6 shadow-lg mb-6">
+              <div className="flex flex-wrap items-center gap-4 mb-4">
+                <button
+                  onClick={toggleAnimation}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
                 >
-                  <option value={1500}>Slow</option>
-                  <option value={800}>Normal</option>
-                  <option value={300}>Fast</option>
-                </select>
-              </div>
-            </div>
+                  {isRunning ? <Pause size={18} /> : <Play size={18} />}
+                  {isRunning ? 'Pause' : 'Play'}
+                </button>
 
-            {steps.length > 0 && (
+                <button
+                  onClick={stepForward}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:opacity-50"
+                  disabled={currentStep >= steps.length - 1 && steps.length > 0}
+                >
+                  <StepForward size={18} /> Step
+                </button>
+
+                <button
+                  onClick={() => { resetAnimation(); runAlgorithm(); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                >
+                  <RotateCcw size={18} /> Reset
+                </button>
+
+                <div className="flex items-center gap-2 ml-auto">
+                  <span className="text-sm font-medium">Speed:</span>
+                  <select
+                    value={animationSpeed}
+                    onChange={(e) => setAnimationSpeed(parseInt(e.target.value))}
+                    className="p-2 border rounded-lg text-sm"
+                  >
+                    <option value={2000}>Slow</option>
+                    <option value={800}>Normal</option>
+                    <option value={400}>Fast</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
                 <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span>
-                    Step <span className="font-bold text-blue-600">{currentStep + 1}</span> of{' '}
-                    <span className="font-bold">{steps.length}</span>
-                  </span>
-                  <span className="font-semibold text-purple-600">{steps[currentStep]?.type?.toUpperCase() || 'READY'}</span>
+                  <span>Step {steps.length > 0 ? currentStep + 1 : 0} of {steps.length}</span>
+                  <span className="font-semibold">{steps[currentStep]?.type || 'Not Started'}</span>
                 </div>
-                <div className="w-full bg-gray-300 rounded-full h-3">
+                <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
+                    className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${steps.length > 0 ? ((currentStep + 1) / steps.length) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          </>
         )}
 
         {/* Main Content */}
@@ -680,14 +805,12 @@ return selected`}</code>
         {tab === 'pseudocode' && <div className="mt-6"><PseudocodeSection /></div>}
 
         {/* Step Information */}
-        {tab === 'visualizer' && steps[currentStep] && (
+        {tab === 'visualizer' && message && (
           <div className="bg-white/90 rounded-lg p-6 shadow-lg mt-6 border-l-4 border-blue-500">
-            <h3 className="text-lg font-semibold mb-2 text-gray-900">Current Step</h3>
-            <p className="text-gray-700 text-base leading-relaxed">{message}</p>
+            <h3 className="text-lg font-semibold mb-2">Current Step:</h3>
+            <p className="text-gray-700 text-lg">{message}</p>
           </div>
         )}
-
-
       </div>
     </div>
   );

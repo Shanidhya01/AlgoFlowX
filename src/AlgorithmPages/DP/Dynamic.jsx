@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Zap } from 'lucide-react';
+import { Play, Pause, RotateCcw, StepForward, Code, BookOpen, Zap, Sparkles, ListChecks } from 'lucide-react';
 
 function DynamicProgramming() {
   const [tab, setTab] = useState('visualizer');
@@ -10,6 +10,17 @@ function DynamicProgramming() {
   
   const [problem, setProblem] = useState('fibonacci');
   const [n, setN] = useState(6);
+  const [coinsInput, setCoinsInput] = useState('1,2,5');
+  const [amountInput, setAmountInput] = useState('10');
+  const [str1, setStr1] = useState('ABCDGH');
+  const [str2, setStr2] = useState('AEDFHR');
+  const [errorMessage, setErrorMessage] = useState('');
+  // Randomization helpers
+  const [randCoinCount, setRandCoinCount] = useState(3);
+  const [randCoinMax, setRandCoinMax] = useState(10);
+  const [randAmount, setRandAmount] = useState(20);
+  const [randStr1Len, setRandStr1Len] = useState(6);
+  const [randStr2Len, setRandStr2Len] = useState(6);
   const [dp, setDp] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [result, setResult] = useState(0);
@@ -81,8 +92,12 @@ function DynamicProgramming() {
   // Coin Change DP
   const coinChangeDP = useCallback(() => {
     const operationSteps = [];
-    const coins = [1, 2, 5];
-    const amount = 10;
+    const coins = coinsInput
+      .split(/[ ,]+/)
+      .map(s => s.trim())
+      .filter(Boolean)
+      .map(Number);
+    const amount = parseInt(amountInput);
     const dp = Array(amount + 1).fill(Infinity);
     dp[0] = 0;
 
@@ -142,20 +157,20 @@ function DynamicProgramming() {
     });
 
     return operationSteps;
-  }, []);
+  }, [coinsInput, amountInput]);
 
   // Longest Common Subsequence
   const lcsDP = useCallback(() => {
     const operationSteps = [];
-    const str1 = "ABCDGH";
-    const str2 = "AEDFHR";
-    const m = str1.length;
-    const n = str2.length;
+    const s1 = str1;
+    const s2 = str2;
+    const m = s1.length;
+    const n = s2.length;
     const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
 
     operationSteps.push({
       type: 'initialize',
-      message: `LCS Problem: Find longest common subsequence of "${str1}" and "${str2}". Initialize (${m + 1}) × (${n + 1}) table.`,
+      message: `LCS Problem: Find longest common subsequence of "${s1}" and "${s2}". Initialize (${m + 1}) × (${n + 1}) table.`,
       dp: dp.map(row => [...row]),
       currentIndex: -1,
       result: 0,
@@ -166,14 +181,14 @@ function DynamicProgramming() {
       for (let j = 1; j <= n; j++) {
         operationSteps.push({
           type: 'compare',
-          message: `Comparing str1[${i - 1}]='${str1[i - 1]}' with str2[${j - 1}]='${str2[j - 1]}'`,
+          message: `Comparing str1[${i - 1}]='${s1[i - 1]}' with str2[${j - 1}]='${s2[j - 1]}'`,
           dp: dp.map(row => [...row]),
           currentIndex: `${i}-${j}`,
           result: 0,
           computed: new Set()
         });
 
-        if (str1[i - 1] === str2[j - 1]) {
+        if (s1[i - 1] === s2[j - 1]) {
           dp[i][j] = dp[i - 1][j - 1] + 1;
 
           operationSteps.push({
@@ -209,16 +224,48 @@ function DynamicProgramming() {
     });
 
     return operationSteps;
-  }, []);
+  }, [str1, str2]);
 
   const runAlgorithm = () => {
+    setErrorMessage('');
     let operationSteps = [];
-    
+
     if (problem === 'fibonacci') {
+      if (!Number.isInteger(n) || n < 2 || n > 30) {
+        setErrorMessage('Please choose N between 2 and 30.');
+        return;
+      }
       operationSteps = fibonacciDP();
     } else if (problem === 'coinchange') {
+      const coins = coinsInput
+        .split(/[ ,]+/)
+        .map(s => s.trim())
+        .filter(Boolean)
+        .map(Number)
+        .filter(x => Number.isInteger(x) && x > 0);
+      const amount = parseInt(amountInput);
+      if (coins.length === 0) {
+        setErrorMessage('Provide at least one positive coin value.');
+        return;
+      }
+      if (!Number.isInteger(amount) || amount < 0) {
+        setErrorMessage('Amount must be a non-negative integer.');
+        return;
+      }
+      if (amount > 200) {
+        setErrorMessage('Amount too large for visualization. Please use 200 or less.');
+        return;
+      }
       operationSteps = coinChangeDP();
     } else if (problem === 'lcs') {
+      if (str1.length === 0 || str2.length === 0) {
+        setErrorMessage('Please provide two non-empty strings.');
+        return;
+      }
+      if (str1.length > 14 || str2.length > 14) {
+        setErrorMessage('Strings too long for visualization. Use length 14 or less.');
+        return;
+      }
       operationSteps = lcsDP();
     }
 
@@ -227,6 +274,9 @@ function DynamicProgramming() {
   };
 
   const toggleAnimation = () => {
+    if (!isRunning && steps.length === 0) {
+      runAlgorithm();
+    }
     setIsRunning(!isRunning);
   };
 
@@ -240,9 +290,88 @@ function DynamicProgramming() {
   };
 
   const stepForward = () => {
+    if (steps.length === 0) {
+      runAlgorithm();
+      return;
+    }
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
     }
+  };
+
+  // Presets / Random / Reset
+  const loadFiboExample = (val) => {
+    setN(val);
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+  };
+
+  const loadCoinExample = (coins, amount) => {
+    setCoinsInput(coins.join(','));
+    setAmountInput(String(amount));
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+  };
+
+  const loadLcsExample = (a, b) => {
+    setStr1(a);
+    setStr2(b);
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+  };
+
+  const generateRandomCoins = () => {
+    const count = Math.max(1, Math.min(6, randCoinCount));
+    const maxVal = Math.max(2, Math.min(50, randCoinMax));
+    const coins = Array.from({ length: count }, () => Math.floor(Math.random() * maxVal) + 1);
+    const amt = Math.max(0, Math.min(200, randAmount));
+    setCoinsInput(coins.join(','));
+    setAmountInput(String(amt));
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+  };
+
+  const generateRandomStrings = () => {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const len1 = Math.max(1, Math.min(10, randStr1Len));
+    const len2 = Math.max(1, Math.min(10, randStr2Len));
+    const make = (len) => Array.from({ length: len }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('');
+    setStr1(make(len1));
+    setStr2(make(len2));
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+  };
+
+  const resetToDefault = () => {
+    setProblem('fibonacci');
+    setN(6);
+    setCoinsInput('1,2,5');
+    setAmountInput('10');
+    setStr1('ABCDGH');
+    setStr2('AEDFHR');
+    setRandCoinCount(3);
+    setRandCoinMax(10);
+    setRandAmount(20);
+    setRandStr1Len(6);
+    setRandStr2Len(6);
+    setSteps([]);
+    setCurrentStep(0);
+    setIsRunning(false);
+    setErrorMessage('');
+    setDp([]);
+    setCurrentIndex(-1);
+    setResult(0);
+    setComputedCells(new Set());
   };
 
   useEffect(() => {
@@ -306,6 +435,160 @@ function DynamicProgramming() {
               />
             </div>
           )}
+
+          {problem === 'coinchange' && (
+            <>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Coins:</label>
+                <input
+                  type="text"
+                  value={coinsInput}
+                  onChange={(e) => setCoinsInput(e.target.value)}
+                  disabled={isRunning || steps.length > 0}
+                  placeholder="e.g., 1,2,5"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="mt-1 text-xs text-gray-500">Positive integers; separated by commas or spaces.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">Amount:</label>
+                <input
+                  type="number"
+                  value={amountInput}
+                  onChange={(e) => setAmountInput(e.target.value)}
+                  disabled={isRunning || steps.length > 0}
+                  min="0"
+                  max="200"
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          )}
+
+          {problem === 'lcs' && (
+            <>
+              <div>
+                <label className="block text-sm font-semibold mb-2">String A:</label>
+                <input
+                  type="text"
+                  value={str1}
+                  onChange={(e) => setStr1(e.target.value)}
+                  disabled={isRunning || steps.length > 0}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-2">String B:</label>
+                <input
+                  type="text"
+                  value={str2}
+                  onChange={(e) => setStr2(e.target.value)}
+                  disabled={isRunning || steps.length > 0}
+                  className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </>
+          )}
+        </div>
+
+        {errorMessage && (
+          <div className="mb-4 p-3 rounded-lg border-l-4 border-red-500 bg-red-50 text-red-700">
+            {errorMessage}
+          </div>
+        )}
+
+        {/* Presets / Random / Reset Panels */}
+        <div className="bg-white/80 rounded-lg p-4 shadow-inner border border-gray-200 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <ListChecks className="text-blue-600" size={18} />
+            <h4 className="font-semibold">Examples</h4>
+          </div>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {problem === 'fibonacci' && [5, 8, 10, 12, 15].map(v => (
+              <button key={v} onClick={() => loadFiboExample(v)} disabled={isRunning}
+                className="px-3 py-1 text-sm rounded-full border hover:border-gray-500">
+                N = {v}
+              </button>
+            ))}
+            {problem === 'coinchange' && [
+              { c:[1,2,5], a:10 }, { c:[2,3,7], a:17 }, { c:[1,3,4], a:6 }, { c:[2], a:8 }
+            ].map((ex, idx) => (
+              <button key={idx} onClick={() => loadCoinExample(ex.c, ex.a)} disabled={isRunning}
+                className="px-3 py-1 text-sm rounded-full border hover:border-gray-500">
+                [{ex.c.join(', ')}] → {ex.a}
+              </button>
+            ))}
+            {problem === 'lcs' && [
+              ['ABCDGH','AEDFHR'], ['AGGTAB','GXTXAYB'], ['ABCDEF','FBDAMN'], ['XMJYAUZ','MZJAWXU']
+            ].map(([a,b], idx) => (
+              <button key={idx} onClick={() => loadLcsExample(a,b)} disabled={isRunning}
+                className="px-3 py-1 text-sm rounded-full border hover:border-gray-500">
+                "{a}" vs "{b}"
+              </button>
+            ))}
+          </div>
+
+          {problem === 'coinchange' && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Random coins</label>
+                <input type="number" min="1" max="6" value={randCoinCount}
+                  onChange={(e)=>setRandCoinCount(parseInt(e.target.value)||1)}
+                  className="w-full px-3 py-2 border-2 rounded-lg"/>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Max coin</label>
+                <input type="number" min="2" max="50" value={randCoinMax}
+                  onChange={(e)=>setRandCoinMax(parseInt(e.target.value)||2)}
+                  className="w-full px-3 py-2 border-2 rounded-lg"/>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Amount</label>
+                <input type="number" min="0" max="200" value={randAmount}
+                  onChange={(e)=>setRandAmount(parseInt(e.target.value)||0)}
+                  className="w-full px-3 py-2 border-2 rounded-lg"/>
+              </div>
+              <div className="flex items-end">
+                <button onClick={generateRandomCoins} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg">
+                  <Sparkles size={18}/> Randomize
+                </button>
+              </div>
+            </div>
+          )}
+
+          {problem === 'lcs' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Len A</label>
+                <input type="number" min="1" max="10" value={randStr1Len}
+                  onChange={(e)=>setRandStr1Len(parseInt(e.target.value)||1)}
+                  className="w-full px-3 py-2 border-2 rounded-lg"/>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold mb-1">Len B</label>
+                <input type="number" min="1" max="10" value={randStr2Len}
+                  onChange={(e)=>setRandStr2Len(parseInt(e.target.value)||1)}
+                  className="w-full px-3 py-2 border-2 rounded-lg"/>
+              </div>
+              <div className="flex items-end">
+                <button onClick={generateRandomStrings} className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg">
+                  <Sparkles size={18}/> Randomize
+                </button>
+              </div>
+            </div>
+          )}
+
+          <button onClick={resetToDefault} className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg">
+            <RotateCcw size={18}/> Reset to Default
+          </button>
+          <div className="mt-4 text-sm text-blue-900 bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <p className="font-semibold mb-1">Tips</p>
+            <ul className="list-disc pl-5 space-y-1">
+              <li>Fibonacci: keep N ≤ 30 for fast visualization.</li>
+              <li>Coin Change: large amounts produce longer runs (O(amount × coins)).</li>
+              <li>LCS: time/space O(m×n); keep strings short (≤ 14).</li>
+            </ul>
+          </div>
         </div>
 
         {/* DP Table Display */}
