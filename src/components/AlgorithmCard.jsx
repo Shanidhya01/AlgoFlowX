@@ -153,7 +153,7 @@ const AlgorithmCard = ({ title, description, symbol }) => {
       className="group relative w-full h-96 rounded-2xl transition-all duration-300 cursor-pointer overflow-hidden"
     >
       {/* Background Layers */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 z-0"></div>
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 z-0"></div>
       
       {/* Animated Gradient Background */}
       <div 
@@ -166,7 +166,7 @@ const AlgorithmCard = ({ title, description, symbol }) => {
       ></div>
 
       {/* Animated Border */}
-      <div className="absolute inset-0 rounded-2xl border-2 border-gray-200 group-hover:border-blue-400 transition-all duration-300 z-0"></div>
+      <div className="absolute inset-0 rounded-2xl border-2 border-gray-200 dark:border-gray-700 group-hover:border-blue-400 transition-all duration-300 z-0"></div>
 
       {/* Glassmorphism Effect */}
       <div className="absolute inset-0 backdrop-blur-0 group-hover:backdrop-blur-sm transition-all duration-300 z-0 rounded-2xl"></div>
@@ -193,31 +193,31 @@ const AlgorithmCard = ({ title, description, symbol }) => {
           </div>
 
           {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 group-hover:text-blue-600 transition-colors duration-300 line-clamp-2">
             {title}
           </h2>
 
           {/* Description */}
-          <p className="text-gray-600 text-sm leading-relaxed line-clamp-2 group-hover:text-gray-700 transition-colors duration-300">
+          <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed line-clamp-2 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors duration-300">
             {description}
           </p>
         </div>
 
         {/* Complexity Info */}
         <div className="grid grid-cols-2 gap-2 my-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-2 border border-gray-200">
+          <div className="bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm rounded-lg p-2 border border-gray-200 dark:border-gray-600">
             <div className="flex items-center gap-1 mb-1">
               <Clock size={14} className="text-blue-600" />
-              <span className="text-xs font-semibold text-gray-700">Time</span>
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Time</span>
             </div>
-            <p className="text-sm font-mono font-bold text-gray-900">{complexity.time}</p>
+            <p className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100">{complexity.time}</p>
           </div>
-          <div className="bg-white/60 backdrop-blur-sm rounded-lg p-2 border border-gray-200">
+          <div className="bg-white/60 dark:bg-gray-700/60 backdrop-blur-sm rounded-lg p-2 border border-gray-200 dark:border-gray-600">
             <div className="flex items-center gap-1 mb-1">
               <TrendingUp size={14} className="text-purple-600" />
-              <span className="text-xs font-semibold text-gray-700">Space</span>
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Space</span>
             </div>
-            <p className="text-sm font-mono font-bold text-gray-900">{complexity.space}</p>
+            <p className="text-sm font-mono font-bold text-gray-900 dark:text-gray-100">{complexity.space}</p>
           </div>
         </div>
 

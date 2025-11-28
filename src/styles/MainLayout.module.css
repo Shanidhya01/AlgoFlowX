@@ -186,38 +186,12 @@ body.dark,
   --bg-gradient-end: #475569;
   --text-color: #f1f5f9;
   --text-muted: #94a3b8;
-  --accent-rgb: 99, 102, 241;
-  --accent-color: #6366f1;
-  --accent-color-hover: #4f46e5;
+  --accent-rgb: 96, 165, 250;
+  --accent-color: #60a5fa;
+  --accent-color-hover: #3b82f6;
 }
 
-/* Blue Theme */
-[data-theme="blue"] {
-  --bg-color: #eff6ff;
-  --bg-overlay: rgba(239, 246, 255, 0.9);
-  --bg-gradient-start: #dbeafe;
-  --bg-gradient-middle: #bfdbfe;
-  --bg-gradient-end: #93c5fd;
-  --text-color: #1e3a8a;
-  --text-muted: #3730a3;
-  --accent-rgb: 37, 99, 235;
-  --accent-color: #2563eb;
-  --accent-color-hover: #1d4ed8;
-}
-
-/* Green Theme */
-[data-theme="green"] {
-  --bg-color: #f0fdf4;
-  --bg-overlay: rgba(240, 253, 244, 0.9);
-  --bg-gradient-start: #dcfce7;
-  --bg-gradient-middle: #bbf7d0;
-  --bg-gradient-end: #86efac;
-  --text-color: #14532d;
-  --text-muted: #166534;
-  --accent-rgb: 34, 197, 94;
-  --accent-color: #22c55e;
-  --accent-color-hover: #16a34a;
-}
+/* Removed blue and green data-theme variants */
 
 /* Responsive Design */
 @media (max-width: 1024px) {

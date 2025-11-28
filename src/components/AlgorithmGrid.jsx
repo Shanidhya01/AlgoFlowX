@@ -239,9 +239,9 @@ function AlgorithmGrid({ searchTerm = '' }) {
   }, [searchTerm, selectedCategory, selectedDifficulty, sortBy]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950">
       {/* Header Section */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-200">
+      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -249,13 +249,13 @@ function AlgorithmGrid({ searchTerm = '' }) {
                 <LayoutGrid className="text-white" size={24} />
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Algorithm Hub</h1>
-                <p className="text-gray-600 text-sm">Master coding algorithms with interactive visualizations</p>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Algorithm Hub</h1>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">Master coding algorithms with interactive visualizations</p>
               </div>
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-blue-600">{filteredAlgorithms.length}</div>
-              <p className="text-gray-600 text-sm">Algorithms</p>
+              <p className="text-gray-600 dark:text-gray-300 text-sm">Algorithms</p>
             </div>
           </div>
 
@@ -263,7 +263,7 @@ function AlgorithmGrid({ searchTerm = '' }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Category Filter */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                 <Filter size={16} /> Category
               </label>
               <div className="flex flex-wrap gap-2">
@@ -274,7 +274,7 @@ function AlgorithmGrid({ searchTerm = '' }) {
                     className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
                       selectedCategory === cat
                         ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
                     {cat}
@@ -285,7 +285,7 @@ function AlgorithmGrid({ searchTerm = '' }) {
 
             {/* Difficulty Filter */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
                 <Zap size={16} /> Difficulty
               </label>
               <div className="flex flex-wrap gap-2">
@@ -298,7 +298,7 @@ function AlgorithmGrid({ searchTerm = '' }) {
                         ? diff === 'Easy' ? 'bg-green-600 text-white'
                           : diff === 'Medium' ? 'bg-yellow-600 text-white'
                           : 'bg-red-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
                     } shadow-md`}
                   >
                     {diff}
@@ -309,11 +309,11 @@ function AlgorithmGrid({ searchTerm = '' }) {
 
             {/* Sort Options */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Sort By</label>
+              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Sort By</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-blue-600 focus:outline-none font-medium transition-colors duration-300 bg-white"
+                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-blue-600 focus:outline-none font-medium transition-colors duration-300 bg-white dark:bg-gray-800 dark:text-gray-100"
               >
                 <option value="difficulty">Difficulty</option>
                 <option value="name">Name (A-Z)</option>
@@ -328,14 +328,14 @@ function AlgorithmGrid({ searchTerm = '' }) {
         {filteredAlgorithms.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">No algorithms found</h3>
-            <p className="text-gray-600">Try adjusting your search or filters to find what you're looking for</p>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No algorithms found</h3>
+            <p className="text-gray-600 dark:text-gray-300">Try adjusting your search or filters to find what you're looking for</p>
           </div>
         ) : (
           <>
             {/* Results Summary */}
-            <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 shadow-sm">
-              <p className="text-gray-700">
+            <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <p className="text-gray-700 dark:text-gray-200">
                 <span className="font-bold text-blue-600">{filteredAlgorithms.length}</span> algorithm{filteredAlgorithms.length !== 1 ? 's' : ''} found
                 {selectedCategory !== 'All' && ` in ${selectedCategory}`}
                 {selectedDifficulty !== 'All' && ` • ${selectedDifficulty} level`}

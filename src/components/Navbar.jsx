@@ -1,11 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styles from '../styles/Navbar.module.css';
 
 const themes = [
     { name: 'light', icon: '☀️' },
-    { name: 'dark', icon: '🌙' },
-    { name: 'blue', icon: '🌊' },
-    { name: 'green', icon: '🌿' }
+    { name: 'dark', icon: '🌙' }
 ];
 
 const Logo = () => (
@@ -20,9 +18,35 @@ function Navbar() {
     const [currentTheme, setCurrentTheme] = useState(themes[0]);
     const [isThemeMenuOpen, setIsThemeMenuOpen] = useState(false);
 
+    // Apply theme to <html> element for global Tailwind + CSS variables
+    const applyTheme = (themeName) => {
+        const root = document.documentElement; // <html>
+        // data-theme for CSS variable palettes (light/blue/green/dark)
+        root.setAttribute('data-theme', themeName);
+        // Tailwind dark variant toggling
+        if (themeName === 'dark') {
+            root.classList.add('dark');
+        } else {
+            root.classList.remove('dark');
+        }
+    };
+
+    useEffect(() => {
+        const saved = localStorage.getItem('algoflowx-theme');
+        const allowed = new Set(['light','dark']);
+        const selected = allowed.has(saved) ? saved : 'light';
+        if (!allowed.has(saved)) {
+            localStorage.setItem('algoflowx-theme', 'light');
+        }
+        const initial = themes.find(t => t.name === selected) || themes[0];
+        setCurrentTheme(initial);
+        applyTheme(initial.name);
+    }, []);
+
     const handleThemeChange = (theme) => {
         setCurrentTheme(theme);
-        document.body.className = theme.name;
+        applyTheme(theme.name);
+        localStorage.setItem('algoflowx-theme', theme.name);
         setIsThemeMenuOpen(false);
     };
 
