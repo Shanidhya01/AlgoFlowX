@@ -17,7 +17,7 @@ function ShareToast({ onDone }) {
   );
 }
 
-function FloatingControls() {
+function FloatingControls({ onOpenCommandPalette }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { isFavorite, toggleFavorite } = useApp();
@@ -26,39 +26,35 @@ function FloatingControls() {
 
   const algo = routeToAlgorithmMap[location.pathname];
 
-  // Don't render on home page or if algo not found
-  if (!algo || location.pathname === '/') return null;
+  // All hooks must run unconditionally — guard is after hooks
+  const fav = isFavorite(algo?.title ?? '');
 
-  const fav = isFavorite(algo.title);
-
-  const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-    } catch {
-      // fallback — just show toast anyway for demo
-    }
-    setCopied(true);
-  };
-
-  const handleFavoriteKeyboard = (e) => {
-    if (e.key === 'f' || e.key === 'F') {
-      const tag = document.activeElement?.tagName;
-      if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
-        toggleFavorite(algo.title);
+  useEffect(() => {
+    if (!algo) return;
+    const handler = (e) => {
+      if (e.key === 'f' || e.key === 'F') {
+        const tag = document.activeElement?.tagName;
+        if (tag !== 'INPUT' && tag !== 'TEXTAREA') toggleFavorite(algo.title);
       }
-    }
-  };
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [algo?.title, toggleFavorite]);
 
   useEffect(() => {
-    window.addEventListener('keydown', handleFavoriteKeyboard);
-    return () => window.removeEventListener('keydown', handleFavoriteKeyboard);
-  }, [algo.title]);
-
-  // Appear after slight delay
-  useEffect(() => {
+    setVisible(false);
+    if (!algo) return;
     const id = setTimeout(() => setVisible(true), 200);
     return () => clearTimeout(id);
-  }, [location.pathname]);
+  }, [location.pathname, !!algo]);
+
+  // Early return AFTER all hooks
+  if (!algo || location.pathname === '/') return null;
+
+  const handleShare = async () => {
+    try { await navigator.clipboard.writeText(window.location.href); } catch {}
+    setCopied(true);
+  };
 
   const btnBase = `relative flex items-center justify-center w-10 h-10 rounded-xl
                    bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700

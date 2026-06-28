@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { algorithms, stats } from '../data/algorithms';
+
+// New categories added in expansion
+const EXTENDED_CATEGORY_COLORS = {
+  'Trees':    { bg: 'bg-lime-100 dark:bg-lime-950/60', text: 'text-lime-700 dark:text-lime-300', border: 'border-lime-200 dark:border-lime-800', icon: '🌲' },
+  'Math':     { bg: 'bg-cyan-100 dark:bg-cyan-950/60', text: 'text-cyan-700 dark:text-cyan-300', border: 'border-cyan-200 dark:border-cyan-800', icon: '🔭' },
+};
 
 const CATEGORY_COLORS = {
   'Searching':           { bg: 'bg-blue-100 dark:bg-blue-950/60',   text: 'text-blue-700 dark:text-blue-300',   border: 'border-blue-200 dark:border-blue-800',   icon: '🔍' },
@@ -21,7 +27,16 @@ const DIFF_STYLE = {
   Hard:   'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300',
 };
 
+const ALL_CATEGORY_COLORS = { ...CATEGORY_COLORS, ...EXTENDED_CATEGORY_COLORS };
 const uniqueCategories = [...new Set(algorithms.map(a => a.category))];
+
+const FEATURED = ['Merge Sort', 'Dijkstra\'s Algorithm', 'A* Pathfinding', 'Longest Common Subsequence', 'Binary Search Tree', 'Rabin-Karp Algorithm'];
+
+function getDailyChallenge() {
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const hardAlgos = algorithms.filter(a => a.difficulty === 'Hard' || a.difficulty === 'Medium');
+  return hardAlgos[dayOfYear % hardAlgos.length];
+}
 
 function MiniAlgoCard({ algo, showRemoveRecent }) {
   const { isFavorite, toggleFavorite, clearRecentlyViewed } = useApp();
@@ -123,14 +138,69 @@ function HorizontalScroll({ children }) {
   );
 }
 
+function DailyChallenge() {
+  const challenge = useMemo(getDailyChallenge, []);
+  const { isFavorite, toggleFavorite } = useApp();
+  const fav = isFavorite(challenge.title);
+  const diff = challenge.difficulty;
+  const diffColors = {
+    Easy:   'from-emerald-500 to-teal-500',
+    Medium: 'from-amber-500 to-orange-500',
+    Hard:   'from-red-500 to-rose-500',
+  };
+
+  return (
+    <div className="rounded-2xl overflow-hidden border border-gray-200/70 dark:border-gray-700/50 mb-8">
+      <div className={`bg-gradient-to-r ${diffColors[diff]} p-5 text-white`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="text-3xl">{challenge.symbol}</div>
+            <div>
+              <div className="text-xs font-bold opacity-80 uppercase tracking-wider mb-0.5">⚡ Daily Challenge</div>
+              <h3 className="text-lg font-bold">{challenge.title}</h3>
+            </div>
+          </div>
+          <button
+            onClick={() => toggleFavorite(challenge.title)}
+            className="p-2 rounded-xl bg-white/20 hover:bg-white/30 transition-all duration-200 active:scale-90"
+          >
+            <svg className="w-5 h-5" fill={fav ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+            </svg>
+          </button>
+        </div>
+        <p className="mt-2 text-sm opacity-85 leading-relaxed line-clamp-2">{challenge.description}</p>
+        <div className="mt-3 flex items-center gap-3">
+          <span className="text-xs font-bold px-2.5 py-1 bg-white/20 rounded-full">{challenge.difficulty}</span>
+          <span className="text-xs font-bold px-2.5 py-1 bg-white/20 rounded-full font-mono">{challenge.timeComplexity}</span>
+          <span className="text-xs opacity-70">{challenge.category}</span>
+        </div>
+      </div>
+      <div className="bg-white dark:bg-gray-800/70 px-5 py-3 flex items-center justify-between">
+        <span className="text-xs text-gray-500 dark:text-gray-400">New challenge every day — come back tomorrow!</span>
+        <Link
+          to={challenge.route}
+          className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
+        >
+          Start challenge →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const { recentlyViewed, favorites, clearRecentlyViewed } = useApp();
 
   const favoriteAlgos = algorithms.filter(a => favorites.includes(a.title));
+  const featuredAlgos = algorithms.filter(a => FEATURED.includes(a.title));
 
   return (
     <div className="max-w-7xl mx-auto px-6 pt-8 pb-2">
       <StatsBar />
+
+      {/* Daily Challenge */}
+      <DailyChallenge />
 
       {/* Recently Viewed */}
       {recentlyViewed.length > 0 && (
@@ -173,11 +243,26 @@ function Dashboard() {
         </Section>
       )}
 
+      {/* Featured Algorithms */}
+      <Section
+        title="Featured Algorithms"
+        icon="⭐"
+        action={
+          <span className="text-xs text-gray-400 dark:text-gray-500">Must-know algorithms</span>
+        }
+      >
+        <HorizontalScroll>
+          {featuredAlgos.map(algo => (
+            <MiniAlgoCard key={algo.route} algo={algo} />
+          ))}
+        </HorizontalScroll>
+      </Section>
+
       {/* Quick access by category */}
       <Section title="Browse by Category" icon="📂">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {uniqueCategories.map(cat => {
-            const style = CATEGORY_COLORS[cat] || CATEGORY_COLORS['Advanced'];
+            const style = ALL_CATEGORY_COLORS[cat] || ALL_CATEGORY_COLORS['Advanced'];
             const count = algorithms.filter(a => a.category === cat).length;
             return (
               <a
@@ -186,7 +271,6 @@ function Dashboard() {
                 onClick={(e) => {
                   e.preventDefault();
                   document.getElementById('algorithm-grid')?.scrollIntoView({ behavior: 'smooth' });
-                  // Dispatch a custom event to set the category filter
                   window.dispatchEvent(new CustomEvent('set-category', { detail: cat }));
                 }}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border ${style.bg} ${style.border} ${style.text}
@@ -194,7 +278,7 @@ function Dashboard() {
               >
                 <span className="text-2xl">{style.icon}</span>
                 <span className="text-xs font-semibold leading-tight">{cat}</span>
-                <span className={`text-xs opacity-70`}>{count} algo{count !== 1 ? 's' : ''}</span>
+                <span className="text-xs opacity-70">{count} algo{count !== 1 ? 's' : ''}</span>
               </a>
             );
           })}
