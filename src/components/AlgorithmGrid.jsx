@@ -1,382 +1,267 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import AlgorithmCard from './AlgorithmCard';
-import { Search, Filter, LayoutGrid, Zap } from 'lucide-react';
+import { algorithms, categories, difficulties } from '../data/algorithms';
+import { useApp } from '../contexts/AppContext';
 
-const algorithms = [
-  {
-    title: 'Linear Search',
-    description: 'A simple search algorithm that checks every element in the list until a match is found or the end is reached.',
-    symbol: '➡️',
-    category: 'Searching',
-    difficulty: 'Easy'
-  },
-  {
-    title: 'Binary Search',
-    description: 'An efficient search algorithm that works on sorted arrays by repeatedly dividing the search interval in half.',
-    symbol: '🔍',
-    category: 'Searching',
-    difficulty: 'Easy'
-  },
-  {
-    title: 'Bubble Sort',
-    description: 'A simple sorting algorithm that repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.',
-    symbol: '💭',
-    category: 'Sorting',
-    difficulty: 'Easy'
-  },
-  {
-    title: 'Selection Sort',
-    description: 'A simple sorting algorithm that repeatedly selects the smallest (or largest) element from the unsorted part of the list and moves it to the sorted part.',
-    symbol: '🎯',
-    category: 'Sorting',
-    difficulty: 'Easy'
-  },
-  {
-    title: 'Insertion Sort',
-    description: 'A simple sorting algorithm that builds the sorted list one item at a time by inserting elements into their correct position.',
-    symbol: '📝',
-    category: 'Sorting',
-    difficulty: 'Easy'
-  },
-  {
-    title: 'Counting Sort',
-    description: 'A non-comparative algorithm that counts the frequency of each element and calculates their positions in the sorted array.',
-    symbol: '📊',
-    category: 'Sorting',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Bucket Sort',
-    description: 'A distribution-based algorithm that divides elements into buckets and sorts each bucket individually.',
-    symbol: '🪣',
-    category: 'Sorting',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Merge Sort',
-    description: 'A divide-and-conquer sorting algorithm that divides the array into halves, sorts them, and then merges the sorted halves.',
-    symbol: '🔀',
-    category: 'Sorting',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Quick Sort',
-    description: 'An efficient, recursive divide-and-conquer sorting algorithm that partitions the array and sorts the partitions independently.',
-    symbol: '⚡',
-    category: 'Sorting',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Disjoint Set Union (Union-Find)',
-    description: 'A data structure that keeps track of elements partitioned into disjoint sets and efficiently supports union and find operations with optimizations like path compression and union by rank.',
-    symbol: '🧩',
-    category: 'Graph',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'N-Queens Problem',
-    description: 'A classic backtracking challenge where N queens must be placed on an N×N chessboard such that no two queens attack each other. Demonstrates recursion, constraints, and state exploration.',
-    symbol: '♛',
-    category: 'Backtracking',
-    difficulty: 'Hard'
-  },
-
-
-  {
-    title: 'Recursion',
-    description: 'A problem-solving method where a function calls itself to solve smaller instances of the problem, often used with base cases to terminate recursion.',
-    symbol: '🔁',
-    category: 'Fundamentals',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Heap Sort',
-    description: 'A comparison-based sorting algorithm that uses a binary heap to sort elements.',
-    symbol: '🏔️',
-    category: 'Sorting',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Depth-First Search',
-    description: 'A graph traversal algorithm that explores as far as possible along each branch before backtracking.',
-    symbol: '🌳',
-    category: 'Graph',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Breadth-First Search',
-    description: 'A graph traversal algorithm that explores all the vertices of a graph at the present depth prior to moving on to the vertices at the next depth level.',
-    symbol: '🌊',
-    category: 'Graph',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Dijkstra\'s Algorithm',
-    description: 'Finds the shortest path between nodes in a weighted graph.',
-    symbol: '🛤️',
-    category: 'Graph',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'Kruskal\'s Algorithm',
-    description: 'Finds the minimum spanning tree for a connected weighted graph by adding edges in increasing order of weight.',
-    symbol: '🌉',
-    category: 'Graph',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'Prim\'s Algorithm',
-    description: 'Constructs the minimum spanning tree for a weighted graph by starting with a single vertex and growing the tree.',
-    symbol: '🌲',
-    category: 'Graph',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'Bellman-Ford Algorithm',
-    description: 'Computes shortest paths from a single source vertex to all other vertices in a graph, even with negative weight edges.',
-    symbol: '🕰️',
-    category: 'Graph',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'Floyd-Warshall Algorithm',
-    description: 'A dynamic programming algorithm to find shortest paths between all pairs of vertices in a graph.',
-    symbol: '🔄',
-    category: 'Graph',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'Knapsack Problem',
-    description: 'Solves optimization problems where you select items with given weights and values to maximize value without exceeding the weight limit.',
-    symbol: '🎒',
-    category: 'Dynamic Programming',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'Backtracking Algorithm',
-    description: 'A problem-solving algorithm that explores all possible solutions by building a solution incrementally and abandoning solutions that fail.',
-    symbol: '🔙',
-    category: 'Advanced',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'Dynamic Programming',
-    description: 'A method for solving problems by breaking them down into simpler subproblems, solving each just once, and storing their solutions.',
-    symbol: '💡',
-    category: 'Dynamic Programming',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'Sudoku Solver',
-    description: 'A backtracking algorithm that fills a 9×9 Sudoku grid by placing digits while respecting row, column, and sub-grid constraints, exploring and correcting choices through recursion.',
-    symbol: '🔢',
-    category: 'Backtracking',
-    difficulty: 'Hard'
-  },
-  {
-    title: 'KMP Pattern Matcher',
-    description: 'An efficient string-matching algorithm that preprocesses the pattern using the LPS array to skip unnecessary comparisons, allowing linear-time substring search.',
-    symbol: '🔍',
-    category: 'String Algorithms',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Huffman Coding Tree',
-    description: 'A greedy algorithm that builds an optimal prefix-free binary tree based on character frequencies, producing compressed binary codes used in lossless data compression.',
-    symbol: '🌳',
-    category: 'Greedy',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Greedy Algorithm',
-    description: 'An algorithmic approach that makes the best choice at each step, assuming it will lead to the optimal solution.',
-    symbol: '🤑',
-    category: 'Advanced',
-    difficulty: 'Medium'
-  },
-  {
-    title: 'Topological Sort',
-    description: 'An ordering of the vertices of a directed acyclic graph (DAG) such that for every directed edge u → v, vertex u comes before v in the ordering. Commonly implemented using DFS or Kahn’s BFS-based algorithm.',
-    symbol: '📐',
-    category: 'Graph',
-    difficulty: 'Medium'
-  }
-
+const SORT_OPTIONS = [
+  { value: 'difficulty', label: 'Difficulty' },
+  { value: 'name', label: 'Name A–Z' },
+  { value: 'favorites', label: 'Favorites first' },
 ];
+
+const DIFF_ORDER = { Easy: 1, Medium: 2, Hard: 3 };
+
+function FilterChip({ label, active, onClick, activeClass }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 whitespace-nowrap ${
+        active
+          ? `${activeClass} shadow-sm scale-105`
+          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+const DIFF_ACTIVE = {
+  All:    'bg-gray-800 text-white border-gray-800 dark:bg-gray-200 dark:text-gray-900 dark:border-gray-200',
+  Easy:   'bg-emerald-600 text-white border-emerald-600',
+  Medium: 'bg-amber-500 text-white border-amber-500',
+  Hard:   'bg-red-600 text-white border-red-600',
+};
+
+const CAT_ACTIVE = 'bg-blue-600 text-white border-blue-600';
+const CAT_DEFAULT = '';
 
 function AlgorithmGrid({ searchTerm = '' }) {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedDifficulty, setSelectedDifficulty] = useState('All');
   const [sortBy, setSortBy] = useState('difficulty');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const gridRef = useRef(null);
+  const { favorites } = useApp();
 
-  // Get unique categories
-  const categories = ['All', ...new Set(algorithms.map(algo => algo.category))];
-  const difficulties = ['All', 'Easy', 'Medium', 'Hard'];
+  // Listen for category events from Dashboard quick-access cards
+  useEffect(() => {
+    const handler = (e) => {
+      setSelectedCategory(e.detail);
+      setSelectedDifficulty('All');
+      setShowFavoritesOnly(false);
+    };
+    window.addEventListener('set-category', handler);
+    return () => window.removeEventListener('set-category', handler);
+  }, []);
 
-  // Filter and sort algorithms
   const filteredAlgorithms = useMemo(() => {
-    let filtered = algorithms.filter(algorithm => {
-      const matchesSearch = 
-        algorithm.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        algorithm.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesCategory = selectedCategory === 'All' || algorithm.category === selectedCategory;
-      const matchesDifficulty = selectedDifficulty === 'All' || algorithm.difficulty === selectedDifficulty;
+    let list = algorithms.filter(algo => {
+      const q = searchTerm.toLowerCase();
+      const matchesSearch = !q ||
+        algo.title.toLowerCase().includes(q) ||
+        algo.description.toLowerCase().includes(q) ||
+        algo.category.toLowerCase().includes(q);
 
-      return matchesSearch && matchesCategory && matchesDifficulty;
+      const matchesCategory = selectedCategory === 'All' || algo.category === selectedCategory;
+      const matchesDifficulty = selectedDifficulty === 'All' || algo.difficulty === selectedDifficulty;
+      const matchesFav = !showFavoritesOnly || favorites.includes(algo.title);
+
+      return matchesSearch && matchesCategory && matchesDifficulty && matchesFav;
     });
 
-    // Sort
     if (sortBy === 'difficulty') {
-      const diffOrder = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
-      filtered.sort((a, b) => diffOrder[a.difficulty] - diffOrder[b.difficulty]);
+      list = list.slice().sort((a, b) => DIFF_ORDER[a.difficulty] - DIFF_ORDER[b.difficulty]);
+    } else if (sortBy === 'name') {
+      list = list.slice().sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortBy === 'favorites') {
+      list = list.slice().sort((a, b) => {
+        const af = favorites.includes(a.title) ? 0 : 1;
+        const bf = favorites.includes(b.title) ? 0 : 1;
+        return af - bf || DIFF_ORDER[a.difficulty] - DIFF_ORDER[b.difficulty];
+      });
     }
-    else if (sortBy === 'name') {
-      filtered.sort((a, b) => a.title.localeCompare(b.title));
-    } 
 
-    return filtered;
-  }, [searchTerm, selectedCategory, selectedDifficulty, sortBy]);
+    return list;
+  }, [searchTerm, selectedCategory, selectedDifficulty, sortBy, showFavoritesOnly, favorites]);
+
+  const hasActiveFilters = selectedCategory !== 'All' || selectedDifficulty !== 'All' || showFavoritesOnly || searchTerm;
+
+  const clearFilters = () => {
+    setSelectedCategory('All');
+    setSelectedDifficulty('All');
+    setShowFavoritesOnly(false);
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950">
-      {/* Header Section */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/70 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-6 py-6">
-          <div className="flex items-center justify-between mb-6">
+    <div
+      id="algorithm-grid"
+      ref={gridRef}
+      className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-purple-50/20 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950"
+    >
+      {/* Sticky filter bar */}
+      <div className="sticky top-16 z-30 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-200/70 dark:border-gray-800/70 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+
+          {/* Header row */}
+          <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg">
-                <LayoutGrid className="text-white" size={24} />
+              <div className="p-2 rounded-xl bg-gradient-to-br from-blue-600 to-violet-600 shadow-sm">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                  <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+                </svg>
               </div>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Algorithm Hub</h1>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">Master coding algorithms with interactive visualizations</p>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-none">Algorithm Hub</h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Master algorithms with interactive visualizations</p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold text-blue-600">{filteredAlgorithms.length}</div>
-              <p className="text-gray-600 dark:text-gray-300 text-sm">Algorithms</p>
+            <div className="flex items-center gap-3">
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
+              <div className="text-right">
+                <span className="text-2xl font-extrabold text-blue-600 dark:text-blue-400">{filteredAlgorithms.length}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 ml-1">/ {algorithms.length}</span>
+              </div>
             </div>
           </div>
 
-          {/* Filter Section */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Category Filter */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                <Filter size={16} /> Category
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
-                      selectedCategory === cat
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
+          {/* Filter row */}
+          <div className="flex flex-col gap-3">
+            {/* Category chips */}
+            <div className="flex flex-wrap gap-1.5 items-center">
+              <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mr-1">Category</span>
+              {categories.map(cat => (
+                <FilterChip
+                  key={cat}
+                  label={cat}
+                  active={selectedCategory === cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  activeClass={CAT_ACTIVE}
+                />
+              ))}
             </div>
 
-            {/* Difficulty Filter */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">
-                <Zap size={16} /> Difficulty
-              </label>
-              <div className="flex flex-wrap gap-2">
+            {/* Difficulty + Sort row */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap gap-1.5 items-center">
+                <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mr-1">Difficulty</span>
                 {difficulties.map(diff => (
-                  <button
+                  <FilterChip
                     key={diff}
+                    label={diff}
+                    active={selectedDifficulty === diff}
                     onClick={() => setSelectedDifficulty(diff)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${
-                      selectedDifficulty === diff
-                        ? diff === 'Easy' ? 'bg-green-600 text-white'
-                          : diff === 'Medium' ? 'bg-yellow-600 text-white'
-                          : 'bg-red-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'
-                    } shadow-md`}
-                  >
-                    {diff}
-                  </button>
+                    activeClass={DIFF_ACTIVE[diff] ?? DIFF_ACTIVE.All}
+                  />
                 ))}
               </div>
-            </div>
 
-            {/* Sort Options */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Sort By</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-2 border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-blue-600 focus:outline-none font-medium transition-colors duration-300 bg-white dark:bg-gray-800 dark:text-gray-100"
-              >
-                <option value="difficulty">Difficulty</option>
-                <option value="name">Name (A-Z)</option>
-              </select>
+              <div className="ml-auto flex items-center gap-3">
+                {/* Favorites toggle */}
+                <button
+                  onClick={() => setShowFavoritesOnly(v => !v)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${
+                    showFavoritesOnly
+                      ? 'bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <svg className="w-3 h-3" fill={showFavoritesOnly ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                  </svg>
+                  Favorites{favorites.length > 0 ? ` (${favorites.length})` : ''}
+                </button>
+
+                {/* Sort select */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap">Sort by</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700
+                               bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                               focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20
+                               transition-all duration-200"
+                  >
+                    {SORT_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Results */}
       <div className="max-w-7xl mx-auto px-6 py-8">
+
+        {/* Active filter summary */}
+        {hasActiveFilters && filteredAlgorithms.length > 0 && (
+          <div className="mb-5 flex items-center gap-2 flex-wrap">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Showing <span className="font-bold text-blue-600 dark:text-blue-400">{filteredAlgorithms.length}</span> algorithm{filteredAlgorithms.length !== 1 ? 's' : ''}
+              {selectedCategory !== 'All' && <span className="text-gray-700 dark:text-gray-300"> in <strong>{selectedCategory}</strong></span>}
+              {selectedDifficulty !== 'All' && <span> · <span className="font-semibold">{selectedDifficulty}</span></span>}
+              {showFavoritesOnly && <span> · ❤️ Favorites only</span>}
+              {searchTerm && <span> · matching "<em>{searchTerm}</em>"</span>}
+            </p>
+          </div>
+        )}
+
+        {/* Empty state */}
         {filteredAlgorithms.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">🔍</div>
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">No algorithms found</h3>
-            <p className="text-gray-600 dark:text-gray-300">Try adjusting your search or filters to find what you're looking for</p>
+          <div className="flex flex-col items-center justify-center py-24 text-center animate-fade-in">
+            <div className="text-6xl mb-5 animate-float">
+              {showFavoritesOnly ? '💔' : '🔍'}
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {showFavoritesOnly ? 'No favorites yet' : 'No algorithms found'}
+            </h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-md">
+              {showFavoritesOnly
+                ? 'Click the ❤️ icon on any algorithm card to save your favorites here.'
+                : 'Try adjusting your filters or search term to find what you\'re looking for.'}
+            </p>
+            <button
+              onClick={clearFilters}
+              className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-sm hover:bg-blue-500 transition-colors duration-200"
+            >
+              Clear all filters
+            </button>
           </div>
         ) : (
-          <>
-            {/* Results Summary */}
-            <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <p className="text-gray-700 dark:text-gray-200">
-                <span className="font-bold text-blue-600">{filteredAlgorithms.length}</span> algorithm{filteredAlgorithms.length !== 1 ? 's' : ''} found
-                {selectedCategory !== 'All' && ` in ${selectedCategory}`}
-                {selectedDifficulty !== 'All' && ` • ${selectedDifficulty} level`}
-              </p>
-            </div>
-
-            {/* Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAlgorithms.map((algorithm, index) => (
-                <div
-                  key={index}
-                  className="transform transition-all duration-300 hover:scale-105 animate-fade-in"
-                  style={{
-                    animationDelay: `${index * 50}ms`,
-                    animation: 'fadeIn 0.6s ease-out forwards'
-                  }}
-                >
-                  <AlgorithmCard
-                    title={algorithm.title}
-                    description={algorithm.description}
-                    symbol={algorithm.symbol}
-                  />
-                </div>
-              ))}
-            </div>
-          </>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredAlgorithms.map((algo, i) => (
+              <div
+                key={algo.title}
+                className="animate-fade-in-up"
+                style={{ animationDelay: `${Math.min(i * 40, 400)}ms`, animationFillMode: 'both' }}
+              >
+                <AlgorithmCard
+                  title={algo.title}
+                  description={algo.description}
+                  symbol={algo.symbol}
+                  difficulty={algo.difficulty}
+                  category={algo.category}
+                  route={algo.route}
+                  timeComplexity={algo.timeComplexity}
+                  spaceComplexity={algo.spaceComplexity}
+                />
+              </div>
+            ))}
+          </div>
         )}
       </div>
-
-      <style>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

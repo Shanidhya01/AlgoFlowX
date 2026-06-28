@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"d:/DEV/PROJECT/AlgoFlowX/src/data\" \"d:/DEV/PROJECT/AlgoFlowX/src/pages\")",
+      "Bash(npm run *)",
+      "Bash(ls \"C:/Users/shani/.claude/projects/d--DEV-PROJECT-AlgoFlowX/memory/\" 2>&1)",
+      "Read(//c/Users/shani/.claude/projects/d--DEV-PROJECT-AlgoFlowX/memory/**)"
+    ],
+    "additionalDirectories": [
+      "d:\\DEV\\PROJECT\\AlgoFlowX\\src"
+    ]
+  }
+}

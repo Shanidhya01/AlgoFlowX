@@ -1,37 +1,35 @@
-/* eslint-disable react/prop-types */
-/* eslint-disable no-unused-vars */
-import { useState } from "react";
+import React from "react";
 import Navbar from "./Navbar";
 import Hero from './Hero';
 import SearchBar from './SearchBar';
-import styles from '../styles/MainLayout.module.css';
 import AlgorithmGrid from "./AlgorithmGrid";
-import { SearchProvider } from "../contexts/SearchContext";
+import Dashboard from "./Dashboard";
 import Footer from "./Footer";
+import { SearchProvider, useSearch } from "../contexts/SearchContext";
 
+function HomeContent() {
+  const { searchTerm } = useSearch();
 
-function MainLayout({ children }) {
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Navbar />
+      <main className="flex-1">
+        <Hero />
+        <Dashboard />
+        <SearchBar />
+        <AlgorithmGrid searchTerm={searchTerm} />
+      </main>
+      <Footer />
+    </div>
+  );
+}
 
-   
-
-
-    return (
-        <SearchProvider>
-        <div className={styles.layout}>
-            <Navbar/>
-            <main className={styles.main}>
-                <Hero/>
-                <SearchBar/>
-                <AlgorithmGrid/> 
-                
-            </main>
-            <Footer/>
-
-        </div>
-        </SearchProvider>
-    );
-
-
+function MainLayout() {
+  return (
+    <SearchProvider>
+      <HomeContent />
+    </SearchProvider>
+  );
 }
 
 export default MainLayout;
