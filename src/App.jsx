@@ -1,5 +1,32 @@
-﻿import React, { useEffect, useState, Suspense, lazy } from "react";
-import { Analytics } from '@vercel/analytics/react';
+﻿import React, { useEffect, useState, Suspense, lazy, Component } from "react";
+
+class ErrorBoundary extends Component {
+  state = { error: null };
+  static getDerivedStateFromError(e) { return { error: e }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-950 gap-4 p-8">
+          <div className="text-4xl">⚠️</div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Something went wrong</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md">{this.state.error?.message}</p>
+          <button onClick={() => { this.setState({ error: null }); window.location.href = '/'; }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700">
+            Back to Home
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const Analytics = lazy(() =>
+  import('@vercel/analytics/react')
+    .then(m => ({ default: m.Analytics }))
+    .catch(() => ({ default: () => null }))
+);
+
 import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppProvider, useApp } from './contexts/AppContext';
@@ -321,12 +348,16 @@ function AppContent() {
 
 function App() {
   return (
-    <Router>
-      <Analytics />
-      <AppProvider>
-        <AppContent />
-      </AppProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <Suspense fallback={null}><Analytics /></Suspense>
+        <AppProvider>
+          <ErrorBoundary>
+            <AppContent />
+          </ErrorBoundary>
+        </AppProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 
