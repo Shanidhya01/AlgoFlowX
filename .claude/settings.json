@@ -5,10 +5,14 @@
       "Bash(npm run *)",
       "Bash(ls \"C:/Users/shani/.claude/projects/d--DEV-PROJECT-AlgoFlowX/memory/\" 2>&1)",
       "Read(//c/Users/shani/.claude/projects/d--DEV-PROJECT-AlgoFlowX/memory/**)",
-      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('deps:', list\\(p['dependencies'].keys\\(\\)\\)\\)\")"
+      "Bash(python -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\('deps:', list\\(p['dependencies'].keys\\(\\)\\)\\)\")",
+      "Bash(mkdir -p \"d:/DEV/PROJECT/AlgoFlowX/src/AlgorithmPages/DP\")",
+      "Bash(ls \"d:\\\\DEV\\\\PROJECT\\\\AlgoFlowX\\\\src\\\\AlgorithmPages\\\\Backtracking\" 2>/dev/null || mkdir -p \"d:\\\\DEV\\\\PROJECT\\\\AlgoFlowX\\\\src\\\\AlgorithmPages\\\\Backtracking\")"
     ],
     "additionalDirectories": [
-      "d:\\DEV\\PROJECT\\AlgoFlowX\\src"
+      "d:\\DEV\\PROJECT\\AlgoFlowX\\src",
+      "d:\\DEV\\PROJECT\\AlgoFlowX\\src\\AlgorithmPages\\DP",
+      "d:\\DEV\\PROJECT\\AlgoFlowX\\src\\AlgorithmPages\\Backtracking"
     ]
   }
 }

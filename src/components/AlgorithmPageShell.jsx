@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import toast from 'react-hot-toast';
@@ -36,19 +36,35 @@ function CodeBlock({ code, lang }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
+  const download = () => {
+    const ext = { 'C++': 'cpp', 'Java': 'java', 'Python': 'py', 'JavaScript': 'js' }[lang] || 'txt';
+    const blob = new Blob([code.trim()], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `algorithm.${ext}`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
   return (
     <div className="relative group">
       <pre className="text-sm leading-relaxed overflow-x-auto p-5 rounded-2xl bg-gray-950 dark:bg-gray-900 text-gray-100 border border-gray-800">
         <code>{code.trim()}</code>
       </pre>
-      <button
-        onClick={copy}
-        className="absolute top-3 right-3 px-2.5 py-1.5 rounded-lg text-xs font-semibold
-                   bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white
-                   opacity-0 group-hover:opacity-100 transition-all duration-200"
-      >
-        {copied ? '✓ Copied' : 'Copy'}
-      </button>
+      <div className="absolute top-3 right-3 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200">
+        <button
+          onClick={download}
+          title="Download source code"
+          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+        >
+          ↓ Download
+        </button>
+        <button
+          onClick={copy}
+          className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white"
+        >
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
+      </div>
     </div>
   );
 }
@@ -82,9 +98,20 @@ export function AlgorithmPageShell({
   done = false,
   theory,
   code,
+  // Enhanced props
+  advantages = [],
+  disadvantages = [],
+  applications = [],
+  interviewTips = [],
+  relatedAlgos = [],
+  practiceProblems = [],
+  pseudocode = [],
+  currentPseudoLine = -1,
   children,
 }) {
   const [tab, setTab] = useState('visualizer');
+  const [fullscreen, setFullscreen] = useState(false);
+  const vizRef = useRef(null);
   const { isFavorite, toggleFavorite } = useApp();
   const fav = isFavorite(title);
 
@@ -105,10 +132,23 @@ export function AlgorithmPageShell({
     });
   };
 
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement && vizRef.current) {
+      vizRef.current.requestFullscreen?.().then(() => setFullscreen(true)).catch(() => {});
+    } else {
+      document.exitFullscreen?.().then(() => setFullscreen(false)).catch(() => {});
+    }
+  }, []);
+
+  const hasInfo = advantages.length || disadvantages.length || applications.length || interviewTips.length || relatedAlgos.length || practiceProblems.length;
+  const hasPseudo = pseudocode.length > 0;
+
   const TABS = [
     { id: 'visualizer', label: '⚡ Visualizer' },
     { id: 'theory', label: '📖 Theory' },
+    ...(hasPseudo ? [{ id: 'pseudocode', label: '📜 Pseudocode' }] : []),
     { id: 'code', label: '💻 Code' },
+    ...(hasInfo ? [{ id: 'info', label: 'ℹ️ Info' }] : []),
   ];
 
   return (
@@ -325,7 +365,17 @@ export function AlgorithmPageShell({
               </div>
 
               {/* Visualization */}
-              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 overflow-x-auto">
+              <div ref={vizRef} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5 sm:p-6 overflow-x-auto relative">
+                <button
+                  onClick={toggleFullscreen}
+                  title={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                  className="absolute top-3 right-3 p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-150 z-10"
+                >
+                  {fullscreen
+                    ? <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"/></svg>
+                    : <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"/></svg>
+                  }
+                </button>
                 {children}
               </div>
             </main>
@@ -340,10 +390,96 @@ export function AlgorithmPageShell({
         </div>
       )}
 
+      {/* Pseudocode Tab */}
+      {tab === 'pseudocode' && (
+        <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white mb-4">Pseudocode</h3>
+            <div className="font-mono text-sm rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+              {pseudocode.map((line, i) => (
+                <div
+                  key={i}
+                  className={`flex gap-3 px-4 py-1 transition-colors duration-200 ${
+                    i === currentPseudoLine
+                      ? 'bg-amber-100 dark:bg-amber-900/50 border-l-4 border-amber-500'
+                      : 'border-l-4 border-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                  }`}
+                >
+                  <span className="text-gray-400 dark:text-gray-600 select-none w-5 text-right flex-shrink-0">{i + 1}</span>
+                  <span className={`${i === currentPseudoLine ? 'text-amber-800 dark:text-amber-200 font-semibold' : 'text-gray-700 dark:text-gray-300'} whitespace-pre`}>
+                    {line}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Code Tab */}
       {tab === 'code' && (
         <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6">
           {code || <p className="text-gray-400 dark:text-gray-500 text-center py-16">Code examples coming soon.</p>}
+        </div>
+      )}
+
+      {/* Info Tab */}
+      {tab === 'info' && (
+        <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 space-y-5">
+          {(advantages.length > 0 || disadvantages.length > 0) && (
+            <div className="grid sm:grid-cols-2 gap-4">
+              {advantages.length > 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+                  <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400 mb-3 flex items-center gap-2">✅ Advantages</h3>
+                  <ul className="space-y-2">{advantages.map((a, i) => <li key={i} className="text-sm text-gray-600 dark:text-gray-400 flex gap-2"><span className="text-emerald-500 flex-shrink-0">•</span>{a}</li>)}</ul>
+                </div>
+              )}
+              {disadvantages.length > 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+                  <h3 className="text-sm font-bold text-red-700 dark:text-red-400 mb-3 flex items-center gap-2">⚠️ Disadvantages</h3>
+                  <ul className="space-y-2">{disadvantages.map((d, i) => <li key={i} className="text-sm text-gray-600 dark:text-gray-400 flex gap-2"><span className="text-red-400 flex-shrink-0">•</span>{d}</li>)}</ul>
+                </div>
+              )}
+            </div>
+          )}
+          {applications.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+              <h3 className="text-sm font-bold text-blue-700 dark:text-blue-400 mb-3">🌍 Real-World Applications</h3>
+              <div className="flex flex-wrap gap-2">{applications.map((a, i) => <span key={i} className="px-3 py-1.5 rounded-xl text-xs font-medium bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">{a}</span>)}</div>
+            </div>
+          )}
+          {interviewTips.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+              <h3 className="text-sm font-bold text-violet-700 dark:text-violet-400 mb-3">💡 Interview Tips</h3>
+              <ul className="space-y-2">{interviewTips.map((t, i) => <li key={i} className="text-sm text-gray-600 dark:text-gray-400 flex gap-2"><span className="text-violet-500 flex-shrink-0">→</span>{t}</li>)}</ul>
+            </div>
+          )}
+          {relatedAlgos.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+              <h3 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">🔗 Related Algorithms</h3>
+              <div className="flex flex-wrap gap-2">
+                {relatedAlgos.map((r, i) => (
+                  <a key={i} href={r.route} className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 transition-colors">{r.title}</a>
+                ))}
+              </div>
+            </div>
+          )}
+          {practiceProblems.length > 0 && (
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-5">
+              <h3 className="text-sm font-bold text-amber-700 dark:text-amber-400 mb-3">🎯 Practice Problems</h3>
+              <div className="space-y-2">
+                {practiceProblems.map((p, i) => (
+                  <div key={i} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{p.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${p.difficulty === 'Easy' ? 'bg-emerald-100 text-emerald-700' : p.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>{p.difficulty}</span>
+                      {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">Solve →</a>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
